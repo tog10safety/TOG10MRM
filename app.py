@@ -20,21 +20,36 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 
+# Replace the existing database configuration with this:
 app = Flask(__name__)
 
-# Configuration
-app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
+# Configuration - Use environment variables for production
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
-# MySQL Database Configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://mrm_user:Daris_032218@localhost/mrm_system'
+# Database Configuration - Use Render's database URL
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Replace postgres:// with postgresql:// for SQLAlchemy
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Fallback to MySQL for local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://mrm_user:Daris_032218@localhost/mrm_system'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# PostgreSQL-specific engine options
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
     'pool_pre_ping': True,
     'pool_size': 10,
-    'max_overflow': 20
+    'max_overflow': 20,
+    'connect_args': {
+        'connect_timeout': 10,
+        'application_name': 'mrm_system'
+    }
 }
-
 # Security configurations
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
@@ -74,10 +89,11 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True,
                          nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    authority = db.Column(db.Enum(
-        'Administrator', 'Evaluator', 'Creator'), nullable=False, default='Creator')
-    category = db.Column(db.Enum('Officer', 'Enlisted Personnel',
-                         'Civilian Human Resource (CivHR)'), nullable=False)
+    
+    # CHANGED: Convert Enum to String for PostgreSQL compatibility
+    authority = db.Column(db.String(20), nullable=False, default='Creator')
+    category = db.Column(db.String(50), nullable=False)
+    
     rank = db.Column(db.String(50))
     designation = db.Column(db.String(100))
     first_name = db.Column(db.String(100), nullable=False)
@@ -130,7 +146,13 @@ class User(db.Model):
     def get_unit_logo(self):
         logo = UnitLogo.query.filter_by(unit_name=self.unit).first()
         if logo:
-            return url_for('get_unit_logo', filename=logo.logo_filename)
+            # Updated to handle both local and S3 storage
+            from storage import get_storage
+            storage = get_storage()
+            if hasattr(storage, 's3_client'):  # If using S3
+                return logo.logo_filename  # This is the full S3 URL
+            else:
+                return url_for('get_unit_logo', filename=logo.logo_filename)
         return url_for('static', filename='default_logo.png')
 
     # Updated relationships - REMOVED UnitAuthority references
@@ -142,12 +164,9 @@ class User(db.Model):
         'MRMForm', backref='mrm_reviewer', foreign_keys='MRMForm.reviewed_by')
     uploaded_unit_logos = db.relationship(
         'UnitLogo', backref='logo_uploader', foreign_keys='UnitLogo.uploaded_by')
-    # Removed: unit_authorities relationship since we don't have UnitAuthority model anymore
 
 
 # Unit Logos Model
-
-
 class UnitLogo(db.Model):
     __tablename__ = 'unit_logo'
     id = db.Column(db.Integer, primary_key=True)
@@ -157,27 +176,28 @@ class UnitLogo(db.Model):
     date_uploaded = db.Column(db.DateTime, default=datetime.utcnow)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-# Hazard Registry Model - Optimized for MySQL
-
-
+# Hazard Registry Model - Updated for PostgreSQL
 class HazardRegistry(db.Model):
     __tablename__ = 'hazard_registry'
     id = db.Column(db.Integer, primary_key=True)
     unit = db.Column(db.String(100), nullable=False, index=True)
-    activity_code = db.Column(db.Enum(
-        'Airfield', 'Flight', 'Ground', 'Movement', 'Operations',
-        'Security', 'Training', 'Base Services', 'Communications',
-        'Administration', 'Others'
-    ), nullable=False)
+    
+    # CHANGED: Convert Enum to String for PostgreSQL compatibility
+    activity_code = db.Column(db.String(20), nullable=False)
+    
     hazard_description = db.Column(db.Text, nullable=False)
     before_likelihood = db.Column(db.Integer, nullable=False)
-    before_severity = db.Column(
-        db.Enum('A', 'B', 'C', 'D', 'E'), nullable=False)
+    
+    # CHANGED: Convert Enum to String
+    before_severity = db.Column(db.String(1), nullable=False)
+    
     before_risk_rating = db.Column(db.String(5), nullable=False)
     mitigations = db.Column(db.Text, nullable=False)
     after_likelihood = db.Column(db.Integer, nullable=False)
-    after_severity = db.Column(
-        db.Enum('A', 'B', 'C', 'D', 'E'), nullable=False)
+    
+    # CHANGED: Convert Enum to String
+    after_severity = db.Column(db.String(1), nullable=False)
+    
     after_risk_rating = db.Column(db.String(5), nullable=False)
     date_updated = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -237,9 +257,7 @@ class HazardRegistry(db.Model):
         else:
             return 'success'
 
-# MRM Form Model - Optimized for MySQL
-
-
+# MRM Form Model - Updated for PostgreSQL
 class MRMForm(db.Model):
     __tablename__ = 'mrm_form'
     id = db.Column(db.Integer, primary_key=True)
@@ -260,21 +278,18 @@ class MRMForm(db.Model):
     residual_risk = db.Column(db.Integer)
     total_percent = db.Column(db.Float)
 
-    # Updated enum with Supervisor instead of Supervisor/OIC
-    authority_level = db.Column(db.Enum(
-        'Operator',
-        'Supervisor',
-        'Squadron Commander',
-        'Director for Operations',
-        'Commander'
-    ))
+    # CHANGED: Convert Enum to String for PostgreSQL compatibility
+    authority_level = db.Column(db.String(30))
 
-    status = db.Column(db.Enum('draft', 'submitted',
-                       'reviewed'), default='draft')
+    # CHANGED: Convert Enum to String
+    status = db.Column(db.String(20), default='draft')
+    
     date_submitted = db.Column(db.DateTime)
     date_reviewed = db.Column(db.DateTime)
-    review_status = db.Column(
-        db.Enum('pending', 'approved', 'rejected', 'needs_revision'), default='pending')
+    
+    # CHANGED: Convert Enum to String
+    review_status = db.Column(db.String(20), default='pending')
+    
     review_notes = db.Column(db.Text)
     creator_signed = db.Column(db.Boolean, default=False)
     creator_signature_date = db.Column(db.DateTime)
@@ -288,7 +303,6 @@ class MRMForm(db.Model):
     authority_signature_date = db.Column(db.DateTime)
 
     # Updated relationships with unique backref names
-    # Remove duplicate relationships and keep only one set
     mission_hazards_link = db.relationship(
         'MissionHazards', backref='mrm_form_ref')
 
@@ -346,8 +360,6 @@ def validate_mrm_creation_data(form_data, current_user):
     return errors
 
 # Mission Hazards Link Table
-
-
 class MissionHazards(db.Model):
     __tablename__ = 'mission_hazards'
     id = db.Column(db.Integer, primary_key=True)
@@ -365,7 +377,7 @@ class MissionHazards(db.Model):
     )
 
 
-# Constants
+# Constants (These remain the same as they're already strings)
 ACTIVITY_CODES = [
     'Airfield', 'Flight', 'Ground', 'Movement', 'Operations',
     'Security', 'Training', 'Base Services', 'Communications',
@@ -442,6 +454,39 @@ def evaluator_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def validate_activity_code(value):
+    """Validate activity code"""
+    if value not in ACTIVITY_CODES:
+        raise ValueError(f"Invalid activity code: {value}")
+    return value
+
+def validate_severity(value):
+    """Validate severity value"""
+    valid_severities = ['A', 'B', 'C', 'D', 'E']
+    if value.upper() not in valid_severities:
+        raise ValueError(f"Invalid severity: {value}")
+    return value.upper()
+
+def validate_authority_level(value):
+    """Validate authority level"""
+    valid_levels = ['Operator', 'Supervisor', 'Squadron Commander', 'Director for Operations', 'Commander']
+    if value not in valid_levels:
+        raise ValueError(f"Invalid authority level: {value}")
+    return value
+
+def validate_status(value):
+    """Validate MRM status"""
+    valid_statuses = ['draft', 'submitted', 'reviewed']
+    if value not in valid_statuses:
+        raise ValueError(f"Invalid status: {value}")
+    return value
+
+def validate_review_status(value):
+    """Validate review status"""
+    valid_statuses = ['pending', 'approved', 'rejected', 'needs_revision']
+    if value not in valid_statuses:
+        raise ValueError(f"Invalid review status: {value}")
+    return value
 
 def creator_required(f):
     @wraps(f)
@@ -457,8 +502,6 @@ def creator_required(f):
     return decorated_function
 
 # Helper function to get current user
-
-
 def get_current_user():
     if 'user_id' in session:
         return User.query.get(session['user_id'])
@@ -814,8 +857,12 @@ def add_hazard():
             flash('Invalid likelihood value.', 'danger')
             return render_template('add_hazard.html', activity_codes=ACTIVITY_CODES)
 
-        before_severity = request.form.get('before_severity', '').upper()
-        after_severity = request.form.get('after_severity', '').upper()
+        try:
+            before_severity = validate_severity(request.form.get('before_severity', ''))
+            after_severity = validate_severity(request.form.get('after_severity', ''))
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return render_template('add_hazard.html', activity_codes=ACTIVITY_CODES)
 
         valid_severities = ['A', 'B', 'C', 'D', 'E']
         if before_severity not in valid_severities or after_severity not in valid_severities:
@@ -881,8 +928,12 @@ def edit_hazard(hazard_id):
                 flash('Invalid likelihood value.', 'danger')
                 return render_template('edit_hazard.html', hazard=hazard, activity_codes=ACTIVITY_CODES)
 
-            before_severity = request.form.get('before_severity', '').upper()
-            after_severity = request.form.get('after_severity', '').upper()
+            try:
+                before_severity = validate_severity(request.form.get('before_severity', ''))
+                after_severity = validate_severity(request.form.get('after_severity', ''))
+            except ValueError as e:
+                flash(str(e), 'danger')
+                return render_template('add_hazard.html', activity_codes=ACTIVITY_CODES)
 
             valid_severities = ['A', 'B', 'C', 'D', 'E']
             if before_severity not in valid_severities or after_severity not in valid_severities:

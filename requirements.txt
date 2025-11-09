@@ -1,21 +1,11 @@
-# Flask Framework
 Flask==2.3.3
 Flask-SQLAlchemy==3.0.5
 Flask-WTF==1.1.1
 Flask-Limiter==3.3.0
-
-# PostgreSQL - PRIMARY DATABASE
-psycopg2-binary==2.9.7
-
-# File Processing
 Werkzeug==2.3.7
+python-dotenv==1.0.0
+gunicorn==21.2.0
 reportlab==4.0.4
 
-# Environment Management
-python-dotenv==1.0.0
-
-# Production Server
-gunicorn==21.2.0
-
-# REMOVE PyMySQL or comment it out
-# PyMySQL==1.1.0
+# Database drivers
+psycopg2-binary==2.9.7  # For PostgreSQL

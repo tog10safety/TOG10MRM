@@ -26,7 +26,7 @@ app = Flask(__name__)
 # Configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
-# FORCE PostgreSQL on Render - Remove all MySQL references
+# Database Configuration - WITH FALLBACK
 database_url = os.environ.get('DATABASE_URL')
 
 if database_url:
@@ -34,13 +34,13 @@ if database_url:
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    print(f"Using PostgreSQL: {database_url.split('@')[1] if '@' in database_url else 'Database configured'}")
+    print("Using PostgreSQL database")
 else:
-    # On Render, we MUST have DATABASE_URL
-    raise ValueError("DATABASE_URL environment variable is required")
+    # Use SQLite as fallback for development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+    print("Using SQLite fallback database for development")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 # Security configurations
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,

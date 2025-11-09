@@ -1,0 +1,1115 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Mission Risk Management System{% endblock %}</title>
+
+    <!-- Modern CSS Framework -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --primary: #2c5aa0;
+        --secondary: #1e3a8a;
+        --success: #059669;
+        --info: #0ea5e9;
+        --warning: #d97706;
+        --danger: #dc2626;
+        --light: #f8fafc;
+        --dark: #1e293b;
+        --gray: #64748b;
+        --border: #e2e8f0;
+        --gradient: linear-gradient(135deg, #2c5aa0 0%, #1e3a8a 100%);
+        --glass-bg: rgba(255, 255, 255, 0.95);
+        --glass-border: rgba(255, 255, 255, 0.2);
+      }
+
+      * {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      body {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        min-height: 100vh;
+        background-attachment: fixed;
+        color: var(--dark);
+        font-weight: 400;
+      }
+
+      /* Improved Typography */
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        font-weight: 600;
+        color: var(--dark);
+        line-height: 1.3;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+      h2 {
+        font-size: 1.35rem;
+      }
+      h3 {
+        font-size: 1.25rem;
+      }
+      h4 {
+        font-size: 1.15rem;
+      }
+      h5 {
+        font-size: 1.05rem;
+      }
+      h6 {
+        font-size: 0.95rem;
+      }
+
+      .small {
+        font-size: 0.85rem;
+      }
+      .extra-small {
+        font-size: 0.8rem;
+      }
+
+      /* Fixed Navbar */
+      .navbar-glass {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        z-index: 1030;
+        padding: 0.5rem 0;
+      }
+
+      /* Professional Sidebar */
+      .sidebar {
+        background: var(--gradient);
+        color: white;
+        min-height: 100vh;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+      }
+
+      .sidebar-brand {
+        padding: 1rem;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 0.5rem;
+      }
+
+      .nav-link {
+        color: rgba(255, 255, 255, 0.9);
+        padding: 0.6rem 1rem;
+        margin: 0.15rem 0.5rem;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        border: none;
+        font-size: 0.9rem;
+      }
+
+      .nav-link:hover,
+      .nav-link.active {
+        color: white;
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateX(3px);
+      }
+
+      .nav-link i {
+        width: 18px;
+        text-align: center;
+        margin-right: 8px;
+        font-size: 0.9rem;
+      }
+
+      /* Professional Cards */
+      .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        position: relative;
+        z-index: 1;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        font-size: 0.9rem;
+      }
+
+      .card-header {
+        background: var(--light);
+        border-bottom: 1px solid var(--border);
+        padding: 0.8rem 1rem;
+        font-weight: 600;
+      }
+
+      .card-header h5,
+      .card-header h6 {
+        margin-bottom: 0;
+        font-size: 0.95rem;
+      }
+
+      /* Professional Tables */
+      .table-modern {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        border: 1px solid var(--border);
+        font-size: 0.85rem;
+      }
+
+      .table-modern th {
+        background: var(--light);
+        color: var(--dark);
+        border: none;
+        font-weight: 600;
+        padding: 0.75rem 0.6rem;
+        font-size: 0.85rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .table-modern td {
+        padding: 0.6rem;
+        border-color: var(--border);
+        vertical-align: middle;
+        font-size: 0.85rem;
+      }
+
+      .table-modern tbody tr {
+        transition: all 0.2s ease;
+      }
+
+      .table-modern tbody tr:hover {
+        background-color: #f8fafc;
+      }
+
+      /* Professional Buttons */
+      .btn-modern {
+        background: var(--gradient);
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1.2rem;
+        font-weight: 500;
+        color: white;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+      }
+
+      .btn-modern:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(44, 90, 160, 0.3);
+        color: white;
+      }
+
+      .btn {
+        font-size: 0.9rem;
+        font-weight: 500;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+      }
+
+      .btn-sm {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+      }
+
+      /* Form Controls */
+      .form-control,
+      .form-select {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .form-control:focus,
+      .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+      }
+
+      .form-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 0.4rem;
+        color: var(--dark);
+      }
+
+      .form-text {
+        font-size: 0.8rem;
+        color: var(--gray);
+      }
+
+      /* Professional Badges */
+      .badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.3rem 0.6rem;
+        border-radius: 6px;
+      }
+
+      .badge-sm {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+      }
+
+      /* Alerts */
+      .alert {
+        border: none;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        padding: 0.8rem 1rem;
+      }
+
+      .alert-modern {
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Page Header */
+      .page-header {
+        background: transparent;
+        border-radius: 12px;
+        padding: 1.2rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border);
+        background: white;
+      }
+
+      /* Fixed Footer */
+      .footer {
+        background: var(--gradient);
+        color: white;
+        padding: 0.6rem 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 1030;
+        font-size: 0.8rem;
+      }
+
+      .footer a {
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        transition: color 0.2s ease;
+        font-size: 0.8rem;
+      }
+
+      .footer a:hover {
+        color: white;
+      }
+
+      .copyright {
+        font-size: 0.75rem;
+        opacity: 0.9;
+      }
+
+      /* User Avatar */
+      .user-avatar {
+        width: 36px;
+        height: 36px;
+        background: var(--gradient);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.8rem;
+      }
+
+      /* Dropdown Menus */
+      .dropdown-menu {
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        z-index: 1060;
+        font-size: 0.9rem;
+      }
+
+      .dropdown-item {
+        border-radius: 6px;
+        margin: 2px 4px;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+        padding: 0.5rem 0.8rem;
+      }
+
+      .dropdown-item:hover {
+        background: var(--primary);
+        color: white;
+      }
+
+      /* Main Content Area */
+      .container-fluid .row .col-lg-10 {
+        position: relative;
+        z-index: 1;
+        padding-bottom: 80px;
+        min-height: calc(100vh - 120px);
+      }
+
+      /* Mobile Responsive */
+      @media (max-width: 768px) {
+        * {
+          font-size: 0.88rem;
+        }
+
+        h1 {
+          font-size: 1.35rem;
+        }
+        h2 {
+          font-size: 1.25rem;
+        }
+        h3 {
+          font-size: 1.15rem;
+        }
+        h4 {
+          font-size: 1.05rem;
+        }
+
+        .sidebar {
+          min-height: auto;
+          position: fixed;
+          top: 0;
+          left: -100%;
+          width: 280px;
+          height: 100vh;
+          z-index: 1040;
+          transition: left 0.3s ease;
+        }
+
+        .sidebar.show {
+          left: 0;
+        }
+
+        .sidebar-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 1039;
+          display: none;
+        }
+
+        .sidebar-overlay.show {
+          display: block;
+        }
+
+        .table-responsive {
+          font-size: 0.8rem;
+        }
+
+        .btn-group-vertical {
+          flex-direction: row;
+          flex-wrap: wrap;
+          gap: 0.2rem;
+        }
+
+        .page-header {
+          padding: 1rem;
+          margin-bottom: 1rem;
+        }
+
+        .container-fluid .row .col-lg-10 {
+          padding-bottom: 70px;
+        }
+      }
+
+      @media (max-width: 576px) {
+        .container-fluid {
+          padding: 0 8px;
+        }
+
+        .glass-card {
+          margin: 0 -8px;
+          border-radius: 0;
+        }
+
+        .table-modern {
+          border-radius: 0;
+        }
+
+        .card-body {
+          padding: 0.75rem;
+        }
+      }
+
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--secondary);
+      }
+
+      /* Animation classes */
+      .fade-in {
+        animation: fadeIn 0.3s ease-in;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Utility Classes */
+      .text-muted {
+        color: var(--gray) !important;
+      }
+
+      .border {
+        border-color: var(--border) !important;
+      }
+
+      .bg-light {
+        background-color: var(--light) !important;
+      }
+.signature-img {
+    max-height: 60px;
+    border: 1px solid #dee2e6;
+    padding: 5px;
+    background: white;
+}
+      /* User Menu in Sidebar */
+.sidebar-user {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 0.5rem;
+}
+
+.user-menu-trigger {
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    border-radius: 8px;
+}
+
+.user-menu-trigger:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.user-dropdown-menu {
+    background: #f8f9fa; /* Light gray background */
+    border-radius: 8px;
+    margin: 0 0.5rem 1rem 0.5rem;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.user-menu-item {
+    color: #495057 !important; /* Dark text for contrast */
+    padding: 0.5rem 1rem;
+    margin: 0;
+    border-radius: 0;
+    font-size: 0.85rem;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.user-menu-item:hover {
+    color: #070707 !important; /* Darker text on hover */
+    background: #e9ecef !important; /* Slightly darker gray on hover */
+    transform: none;
+}
+
+.user-menu-item i {
+    width: 16px;
+    text-align: center;
+    color: #6c757d; /* Muted icon color */
+}
+
+/* Ensure proper text colors for light background */
+.user-dropdown-menu .nav-link {
+    color: #495057;
+}
+
+.user-dropdown-menu .nav-link:hover {
+    color: #000;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .sidebar-user {
+        padding: 0.5rem;
+    }
+    
+    .user-dropdown-menu {
+        margin: 0 0.25rem 0.5rem 0.25rem;
+    }
+}
+    </style>
+
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body class="d-flex flex-column h-100">
+    {% if current_user %}
+    <!-- Mobile Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- About System Modal -->
+    <div
+      class="modal fade"
+      id="aboutModal"
+      tabindex="-1"
+      aria-labelledby="aboutModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="aboutModalLabel">
+              <i class="fas fa-info-circle me-2"></i>About Mission Risk
+              Management System
+            </h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="text-center mb-4">
+              <img
+                src="{{ url_for('static', filename='logo.png') }}"
+                alt="Philippine Air Force"
+                class="mb-3"
+                style="height: 60px"
+              />
+              <h4 class="text-primary">Mission Risk Management System</h4>
+              <p class="text-muted small">
+                Comprehensive Risk Assessment and Management Platform
+              </p>
+            </div>
+
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <div class="card border-0 bg-light h-100">
+                  <div class="card-body">
+                    <h6 class="card-title text-primary mb-3">
+                      <i class="fas fa-user-tie me-2"></i>System Developer
+                    </h6>
+                    <div class="small">
+                      <p class="mb-1">
+                        <strong>Name:</strong> SSg John Daren P Noche PAF
+                      </p>
+                      <p class="mb-1"><strong>Unit:</strong> TOG 10</p>
+                      <p class="mb-1">
+                        <strong>Branch:</strong> Philippine Air Force
+                      </p>
+                      <p class="mb-1">
+                        <strong>Position:</strong> System Developer
+                      </p>
+                      <p class="mb-0">
+                        <strong>Contact:</strong> TOG 10 Headquarters
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card border-0 bg-light h-100">
+                  <div class="card-body">
+                    <h6 class="card-title text-primary mb-3">
+                      <i class="fas fa-cogs me-2"></i>System Version
+                    </h6>
+                    <div class="small">
+                      <p class="mb-1"><strong>Version:</strong> 1.1.0</p>
+                      <p class="mb-1">
+                        <strong>Framework:</strong> Flask Python
+                      </p>
+                      <p class="mb-1"><strong>Database:</strong> MySQL</p>
+                      <p class="mb-1"><strong>Frontend:</strong> Bootstrap 5</p>
+                      <p class="mb-0">
+                        <strong>Last Updated:</strong> October 2025
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="card border-0 h-100">
+                  <div class="card-header bg-light py-2">
+                    <h6 class="mb-0 text-primary">
+                      <i class="fas fa-list-check me-2"></i>Core Features
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-unstyled small mb-0">
+                      <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Hazard Registry Management
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Mission Risk Assessment (MRM)
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Role-Based Access Control
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Digital Signature Integration
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        PDF Report Generation
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Real-time Risk Calculation
+                      </li>
+                      <li class="mb-0">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Unit Logo Management
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card border-0 h-100">
+                  <div class="card-header bg-light py-2">
+                    <h6 class="mb-0 text-primary">
+                      <i class="fas fa-shield-alt me-2"></i>Security Features
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-unstyled small mb-0">
+                      <li class="mb-2">
+                        <i class="fas fa-lock text-success me-2"></i>
+                        CSRF Protection
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-user-shield text-success me-2"></i>
+                        Role-Based Permissions
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-key text-success me-2"></i>
+                        Secure Authentication
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-clock text-success me-2"></i>
+                        Session Management
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-upload text-success me-2"></i>
+                        Secure File Uploads
+                      </li>
+                      <li class="mb-2">
+                        <i class="fas fa-database text-success me-2"></i>
+                        Data Validation & Sanitization
+                      </li>
+                      <li class="mb-0">
+                        <i class="fas fa-ban text-success me-2"></i>
+                        SQL Injection Protection
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row mt-3">
+              <div class="col-12">
+                <div class="alert alert-info small mb-0">
+                  <div class="d-flex">
+                    <i class="fas fa-lightbulb me-2 mt-1"></i>
+                    <div>
+                      <strong>System Purpose:</strong> The Mission Risk
+                      Management System is designed to streamline risk
+                      assessment processes, ensure operational safety, and
+                      maintain comprehensive records of all mission-related
+                      hazards and mitigations within the Philippine Air Force.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              data-bs-dismiss="modal"
+            >
+              <i class="fas fa-times me-1"></i>Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Mobile First Layout -->
+    <div class="container-fluid p-0">
+      <!-- Top Navigation -->
+      <nav class="navbar navbar-glass navbar-expand-lg">
+        <div class="container-fluid">
+          <!-- Mobile Menu Button -->
+          <button
+            class="btn btn-primary btn-sm d-lg-none me-2"
+            type="button"
+            onclick="toggleSidebar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+
+          <!-- Brand Logo -->
+          <a
+            class="navbar-brand d-flex align-items-center"
+            href="{{ url_for('index') }}"
+          >
+            <img
+              src="{{ url_for('static', filename='logo.png') }}"
+              alt="Philippine Air Force"
+              class="paf-logo"
+              style="height: 35px"
+            />
+            <div class="ms-2">
+              <span class="fw-bold text-primary d-block" style="font-size: 1rem"
+                >Mission Risk Management</span
+              >
+              <small
+                class="text-muted d-none d-sm-block"
+                style="font-size: 0.75rem"
+                >Philippine Air Force</small
+              >
+            </div>
+          </a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="row g-0">
+<!-- Sidebar -->
+<div class="col-lg-2 sidebar" id="sidebar">
+    <div class="sidebar-sticky pt-2">
+        <!-- User Menu in Sidebar - REPLACED BRAND SECTION -->
+        <div class="sidebar-user">
+            <div class="text-center mb-3 p-3">
+                {% if current_user.unit_logo_url and current_user.unit_logo_url != url_for('static', filename='default_logo.png') %}
+                <img src="{{ current_user.unit_logo_url }}" alt="Unit Logo" class="rounded-circle" width="60" height="60" style="object-fit: cover; border: 2px solid rgba(255,255,255,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                {% endif %}
+                
+                <!-- Fallback when no logo or image fails to load -->
+                <div class="default-logo mx-auto {% if current_user.unit_logo_url and current_user.unit_logo_url != url_for('static', filename='default_logo.png') %}d-none{% endif %}" 
+                     style="width: 60px; height: 60px; line-height: 60px; background: rgba(255,255,255,0.1); border-radius: 50%; font-size: 0.7rem; color: white; font-weight: bold;">
+                    {{ current_user.unit[:8] }}
+                </div>
+                
+                <!-- Clickable User Name - CHANGED TO FULL NAME -->
+                <div class="user-menu-trigger mt-2" onclick="toggleUserMenu()" style="cursor: pointer;">
+                  <h6 class="mb-1 text-light" style="font-size: 0.9rem">
+                    <i class="fas fa-user me-1"></i>{{ current_user.get_full_name() }}
+                  </h6>
+                    <small class="text-light opacity-75" style="font-size: 0.75rem">
+                       {{ current_user.authority }}
+                    </small>
+                    <i class="fas fa-chevron-down ms-1 text-light opacity-50" style="font-size: 0.7rem;"></i>
+                   </div>
+                 </div>
+
+            <!-- User Dropdown Menu with Light Gray Background -->
+                <div class="user-dropdown-menu" id="userDropdownMenu" style="display: none;">
+                  <div class="nav flex-column">
+                      <a class="nav-link user-menu-item" href="{{ url_for('edit_profile') }}">
+                    <i class="fas fa-user-edit me-2"></i> Edit Profile
+                    </a>
+                    <a class="nav-link user-menu-item" href="{{ url_for('upload_signature') }}">
+                    <i class="fas fa-signature me-2"></i> My Signature
+                    </a>
+                  <div class="nav-divider my-2 mx-3 border-top border-light opacity-25"></div>
+                    <a class="nav-link user-menu-item" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt me-2"></i> Logout
+                    </a>
+                      <a class="nav-link user-menu-item" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">
+                        <i class="fas fa-info-circle me-2"></i> About System
+                      </a>
+                  </div>
+                </div>
+              </div>
+
+        <!-- Navigation Menu (Keep existing) -->
+        <nav class="nav flex-column">
+            <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
+                <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+            </a>
+
+            {% if current_user.authority in ['Administrator', 'Evaluator'] %}
+            <a class="nav-link {% if request.endpoint in ['view_hazards', 'add_hazard', 'edit_hazard'] %}active{% endif %}" href="{{ url_for('view_hazards') }}">
+                <i class="fas fa-exclamation-triangle me-2"></i> Hazard Registry
+            </a>
+            {% endif %}
+            
+            {% if current_user.authority in ['Administrator', 'Evaluator', 'Creator'] %}
+            <a class="nav-link {% if request.endpoint == 'create_mrm' %}active{% endif %}" href="{{ url_for('create_mrm') }}">
+                <i class="fas fa-plus-circle me-2"></i> Create MRM
+            </a>
+            {% endif %}
+
+            <a class="nav-link {% if request.endpoint == 'view_mrm_forms' %}active{% endif %}" href="{{ url_for('view_mrm_forms') }}">
+                <i class="fas fa-clipboard-list me-2"></i> MRM Forms
+            </a>
+
+            {% if current_user.authority == 'Administrator' %}
+            <div class="nav-divider my-2 mx-3 border-top border-light opacity-25"></div>
+
+            <a class="nav-link {% if request.endpoint in ['manage_users', 'add_user', 'edit_user'] %}active{% endif %}" href="{{ url_for('manage_users') }}">
+                <i class="fas fa-users-cog me-2"></i> User Management
+            </a>
+            <a class="nav-link {% if request.endpoint == 'manage_logos' %}active{% endif %}" href="{{ url_for('manage_logos') }}">
+                <i class="fas fa-image me-2"></i> Unit Logos
+            </a>
+            <a class="nav-link {% if request.endpoint == 'reports' %}active{% endif %}" href="{{ url_for('reports') }}">
+                <i class="fas fa-chart-bar me-2"></i> Reports
+            </a>
+            {% endif %}
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer mt-auto p-2 text-center">
+            <small class="text-light opacity-50" style="font-size: 0.7rem">
+                <i class="fas fa-shield-alt me-1"></i>
+                Secure MRM System
+            </small>
+        </div>
+    </div>
+</div>
+
+        <!-- Main Content -->
+        <div class="col-lg-10">
+          <div class="container-fluid mt-2">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %} {%
+            if messages %} {% for category, message in messages %}
+            <div
+              class="alert alert-{{ category }} alert-modern alert-dismissible fade show fade-in mb-3"
+            >
+              <div class="d-flex align-items-center">
+                <i
+                  class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"
+                ></i>
+                <div class="flex-grow-1">{{ message }}</div>
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="alert"
+                ></button>
+              </div>
+            </div>
+            {% endfor %} {% endif %} {% endwith %}
+
+            <!-- Page Content -->
+            <div class="fade-in">{% block content %}{% endblock %}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed Footer -->
+    <footer class="footer fixed-bottom">
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="col-12 text-center">
+            <div class="copyright">
+              Copyright © 2025 by GSO, TOG 10, TOWEASTMIN. All Rights Reserved.
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+    {% else %}
+    <!-- Login Layout -->
+    <div class="container-fluid">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show mt-3">
+        {{ message }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+        ></button>
+      </div>
+      {% endfor %} {% endif %} {% endwith %} {% block login_content %}{%
+      endblock %}
+    </div>
+    {% endif %}
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <script>
+      // Mobile sidebar functionality
+      function toggleSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("sidebarOverlay");
+        sidebar.classList.toggle("show");
+        overlay.classList.toggle("show");
+
+        // Prevent body scroll when sidebar is open
+        document.body.style.overflow = sidebar.classList.contains("show")
+          ? "hidden"
+          : "";
+      }
+
+      // Close sidebar when clicking on overlay
+      document
+        .getElementById("sidebarOverlay")
+        ?.addEventListener("click", toggleSidebar);
+
+      // Close sidebar when clicking on a link (mobile)
+      document.querySelectorAll(".sidebar .nav-link").forEach((link) => {
+        link.addEventListener("click", () => {
+          if (window.innerWidth < 768) {
+            toggleSidebar();
+          }
+        });
+      });
+
+      // Auto-dismiss alerts after 5 seconds
+      document.addEventListener("DOMContentLoaded", function () {
+        setTimeout(function () {
+          const alerts = document.querySelectorAll(".alert");
+          alerts.forEach((alert) => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+          });
+        }, 5000);
+
+        // Initialize Bootstrap dropdowns properly
+        var dropdownElementList = [].slice.call(
+          document.querySelectorAll(".dropdown-toggle")
+        );
+        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+          return new bootstrap.Dropdown(dropdownToggleEl);
+        });
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(
+          document.querySelectorAll('[data-bs-toggle="tooltip"]')
+        );
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+          return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+      });
+
+      // CSRF token setup for AJAX
+      const csrfToken = "{{ csrf_token() }}";
+      $.ajaxSetup({
+        headers: {
+          "X-CSRFToken": csrfToken,
+        },
+      });
+
+      // User menu toggle function
+function toggleUserMenu() {
+    const userMenu = document.getElementById('userDropdownMenu');
+    const chevron = document.querySelector('.user-menu-trigger .fa-chevron-down');
+    
+    if (userMenu.style.display === 'block') {
+        userMenu.style.display = 'none';
+        chevron.classList.remove('fa-chevron-up');
+        chevron.classList.add('fa-chevron-down');
+    } else {
+        userMenu.style.display = 'block';
+        chevron.classList.remove('fa-chevron-down');
+        chevron.classList.add('fa-chevron-up');
+    }
+}
+
+// Close user menu when clicking outside (for desktop)
+document.addEventListener('click', function(event) {
+    const userMenu = document.getElementById('userDropdownMenu');
+    const userTrigger = document.querySelector('.user-menu-trigger');
+    
+    if (userMenu && userMenu.style.display === 'block' && 
+        !userMenu.contains(event.target) && 
+        !userTrigger.contains(event.target)) {
+        userMenu.style.display = 'none';
+        const chevron = document.querySelector('.user-menu-trigger .fa-chevron-up');
+        if (chevron) {
+            chevron.classList.remove('fa-chevron-up');
+            chevron.classList.add('fa-chevron-down');
+        }
+    }
+});
+
+// Close user menu when mobile sidebar closes
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebarOverlay");
+    sidebar.classList.toggle("show");
+    overlay.classList.toggle("show");
+
+    // Also close user menu when sidebar closes
+    if (!sidebar.classList.contains("show")) {
+        const userMenu = document.getElementById('userDropdownMenu');
+        if (userMenu) {
+            userMenu.style.display = 'none';
+            const chevron = document.querySelector('.user-menu-trigger .fa-chevron-up');
+            if (chevron) {
+                chevron.classList.remove('fa-chevron-up');
+                chevron.classList.add('fa-chevron-down');
+            }
+        }
+    }
+
+    document.body.style.overflow = sidebar.classList.contains("show") ? "hidden" : "";
+}
+    </script>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

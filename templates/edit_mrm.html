@@ -1,0 +1,709 @@
+<!-- templates/edit_mrm.html -->
+{% extends "base.html" %} 
+{% block title %}Edit MRM Form - Mission Risk Management{% endblock %} 
+
+{% block extra_css %}
+<style>
+  .section-card {
+    margin-bottom: 1.5rem;
+  }
+
+  .section-card .card-header {
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .section-card .card-body {
+    padding: 1rem;
+  }
+
+  .form-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .form-text {
+    font-size: 0.75rem;
+  }
+
+  .form-check-label {
+    font-size: 0.85rem;
+  }
+
+  .hazard-selection {
+    max-height: 350px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+  }
+
+  .mitigation-override {
+    font-size: 0.8rem;
+  }
+
+  .risk-badge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .environment-options {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .btn {
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .alert {
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .small-text {
+    font-size: 0.8rem;
+  }
+
+  .compact-row {
+    margin-bottom: 0.8rem;
+  }
+
+  /* Pre-selected hazard styling */
+  .hazard-item.selected {
+    border-left: 4px solid var(--success);
+    background-color: rgba(25, 135, 84, 0.05);
+  }
+
+  /* Status indicator */
+  .status-indicator {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  /* Risk level color coding */
+  .risk-low { background-color: #d4edda; border-left: 4px solid #28a745; }
+  .risk-medium { background-color: #fff3cd; border-left: 4px solid #ffc107; }
+  .risk-high { background-color: #f8d7da; border-left: 4px solid #dc3545; }
+
+  /* Authority level colors */
+  .bg-orange { background-color: #fd7e14 !important; }
+
+  /* Smooth transitions */
+  .hazard-item, .form-control, .form-select {
+    transition: all 0.3s ease;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col">
+        <h1 class="h4 mb-1">
+          <i class="fas fa-edit me-2"></i>Edit MRM Form
+        </h1>
+        <p class="text-muted mb-0 small-text">
+          Update your Mission Risk Management form - <span class="badge bg-secondary status-indicator">Draft</span>
+        </p>
+      </div>
+      <div class="col-auto">
+        <a href="{{ url_for('view_mrm_forms') }}" class="btn btn-secondary btn-sm">
+          <i class="fas fa-arrow-left me-1"></i>Back to Forms
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <form method="POST" id="mrmForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <!-- Hidden fields for computed values -->
+    <input type="hidden" name="computed_max_risk" id="computed_max_risk">
+    <input type="hidden" name="computed_residual_risk" id="computed_residual_risk">
+    <input type="hidden" name="computed_total_percent" id="computed_total_percent">
+
+    <!-- Section 1: Mission Details -->
+    <div class="card section-card">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-info-circle me-2"></i>1. Mission Details
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row compact-row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="activity_mission" class="form-label">Activity/Mission *</label>
+              <input type="text" class="form-control" id="activity_mission" name="activity_mission" 
+                     value="{{ form.activity_mission }}" required placeholder="Enter mission or activity description">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Created By</label>
+              <input type="text" class="form-control" value="{{ current_user.get_full_name() }} ({{ current_user.unit }})" readonly>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="reviewed_by" class="form-label">Reviewed By</label>
+              <select class="form-select" id="reviewed_by" name="reviewed_by">
+                <option value="">Select Evaluator</option>
+                {% for evaluator in evaluators %}
+                <option value="{{ evaluator.id }}" {% if form.reviewed_by and form.reviewed_by == evaluator.id %}selected{% endif %}>
+                  {{ evaluator.get_full_name() }} ({{ evaluator.unit }})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">MRM Number</label>
+              <input type="text" class="form-control" value="{{ form.mrm_number }}" readonly style="font-family: 'Courier New', monospace;">
+              <small class="text-muted">This number cannot be changed</small>
+            </div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="safety_objectives" class="form-label">Safety Objectives *</label>
+          <textarea class="form-control" id="safety_objectives" name="safety_objectives" rows="3" required
+                    placeholder="Describe the safety objectives for this mission...">{{ form.safety_objectives }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Assumptions/Nominal Conditions -->
+    <div class="card section-card">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-check-circle me-2"></i>2. Assumptions/Nominal Conditions
+        </h5>
+      </div>
+      <div class="card-body">
+        <!-- I'M SAFE Checklist -->
+        <div class="mb-3">
+          <h6 class="mb-2"><i class="fas fa-user me-1"></i>Crew/Personnel - I'M SAFE Checklist *</h6>
+          <div class="alert alert-warning py-2">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            <span class="small-text">All I'M SAFE checklist items must be confirmed to update the form.</span>
+          </div>
+          <div class="row">
+            {% for key, description in imsafe_checklist.items() %}
+            <div class="col-md-6 imsafe-item">
+              <div class="form-check">
+                <input class="form-check-input imsafe-checkbox" type="checkbox" 
+                       name="imsafe_{{ key }}" id="imsafe_{{ key }}" value="on"
+                       {% if imsafe_values.get(key, false) %}checked{% endif %}>
+                <label class="form-check-label small-text" for="imsafe_{{ key }}">
+                  <strong>{{ key }}</strong> - {{ description.split(' - ')[1] }}
+                </label>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <div id="imsafeWarning" class="text-danger mt-2 small-text" style="display: none;">
+            <i class="fas fa-exclamation-circle me-1"></i>
+            All I'M SAFE items must be confirmed before updating the MRM.
+          </div>
+        </div>
+
+        <!-- Aircraft/Vehicle -->
+        <div class="mb-3">
+          <h6 class="mb-2"><i class="fas fa-plane me-1"></i>Aircraft/Vehicle</h6>
+          <input type="text" class="form-control" name="aircraft_vehicle" 
+                 value="{{ form.aircraft_vehicle or '' }}" placeholder="Describe aircraft/vehicle conditions...">
+          <div class="form-text">Optional - describe the aircraft, vehicle, or equipment being used</div>
+        </div>
+
+        <!-- Environment -->
+        <div class="mb-3">
+          <h6 class="mb-2"><i class="fas fa-cloud me-1"></i>Environment *</h6>
+          <div class="row compact-row">
+            <div class="col-md-3">
+              <label for="environment_weather" class="form-label">Weather</label>
+              <select class="form-select" id="environment_weather" name="environment_weather" required>
+                <option value="">-- Select Weather --</option>
+                {% for option in weather_options %}
+                <option value="{{ option }}" 
+                  {% if environment_data and environment_data.weather == option %}selected
+                  {% elif form.environment and option in form.environment %}selected{% endif %}>
+                  {{ option }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label for="environment_lighting" class="form-label">Lighting</label>
+              <select class="form-select" id="environment_lighting" name="environment_lighting" required>
+                <option value="">-- Select Lighting --</option>
+                {% for option in lighting_options %}
+                <option value="{{ option }}"
+                  {% if environment_data and environment_data.lighting == option %}selected
+                  {% elif form.environment and option in form.environment %}selected{% endif %}>
+                  {{ option }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label for="environment_workspace" class="form-label">Workspace</label>
+              <select class="form-select" id="environment_workspace" name="environment_workspace" required>
+                <option value="">-- Select Workspace --</option>
+                {% for option in workspace_options %}
+                <option value="{{ option }}"
+                  {% if environment_data and environment_data.workspace == option %}selected
+                  {% elif form.environment and option in form.environment %}selected{% endif %}>
+                  {{ option }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label for="environment_tempo" class="form-label">Operational Tempo</label>
+              <select class="form-select" id="environment_tempo" name="environment_tempo" required>
+                <option value="">-- Select Tempo --</option>
+                {% for option in tempo_options %}
+                <option value="{{ option }}"
+                  {% if environment_data and environment_data.operational_tempo == option %}selected
+                  {% elif form.environment and option in form.environment %}selected{% endif %}>
+                  {{ option }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="form-text">All environment fields are required</div>
+        </div>
+
+        <!-- Mission Statement -->
+        <div class="mb-3">
+          <h6 class="mb-2"><i class="fas fa-bullseye me-1"></i>Mission Statement</h6>
+          <textarea class="form-control small-text" name="mission_statement" rows="2" placeholder="Enter the mission statement...">{{ form.mission_statement or "Minimize risk to ALARP while maintaining operational effectiveness." }}</textarea>
+          <div class="form-text">Default mission statement can be customized for this specific mission</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Risk Assessment and Mitigations -->
+    <div class="card section-card">
+      <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+          <i class="fas fa-exclamation-triangle me-2"></i>3. Risk Assessment and Mitigations
+        </h5>
+      </div>
+      <div class="card-body">
+        <!-- Hazard Filter -->
+        <div class="row compact-row mb-3">
+          <div class="col-md-4">
+            <label class="form-label">Filter by Unit</label>
+            <input type="text" class="form-control" value="{{ current_user.unit }}" readonly>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Filter by Activity Code</label>
+            <select class="form-select" id="filter_activity_code" onchange="filterHazards()">
+              <option value="All">All Activity Codes</option>
+              {% for code in activity_codes %}
+              <option value="{{ code }}">{{ code }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">&nbsp;</label>
+            <button type="button" class="btn btn-outline-primary w-100 btn-sm" onclick="filterHazards()">
+              <i class="fas fa-filter me-1"></i>Apply Filters
+            </button>
+          </div>
+        </div>
+
+        <!-- Hazard Selection -->
+        <div class="hazard-selection border rounded p-2">
+          <h6 class="mb-2">
+            Select Hazards for this Mission: 
+            <span class="badge bg-primary badge-sm" id="selectedHazardsCount">
+              {{ current_hazard_ids|length }} selected
+            </span>
+          </h6>
+          {% if hazards %}
+          <div id="hazardsContainer">
+            {% for hazard in hazards %}
+            <div class="card mb-2 hazard-item {% if hazard.id in current_hazard_ids %}selected{% endif %}" 
+                 data-activity="{{ hazard.activity_code }}"
+                 data-hazard-id="{{ hazard.id }}"
+                 data-before-rating="{{ hazard.before_risk_rating }}"
+                 data-after-rating="{{ hazard.after_risk_rating }}"
+                 data-risk-color="{{ hazard.get_risk_color(hazard.after_risk_rating) }}">
+              <div class="card-body py-2">
+                <div class="form-check">
+                  <input class="form-check-input hazard-checkbox" type="checkbox" 
+                         name="hazards" value="{{ hazard.id }}" id="hazard_{{ hazard.id }}"
+                         {% if hazard.id in current_hazard_ids %}checked{% endif %}>
+                  <label class="form-check-label w-100 small-text" for="hazard_{{ hazard.id }}">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong class="text-primary">{{ hazard.activity_code }}</strong> - {{ hazard.hazard_description }}
+                        <br>
+                        <small class="text-muted">
+                          Risk Assessment:
+                          <span class="badge bg-{{ hazard.get_risk_color(hazard.before_risk_rating) }} risk-badge before-risk-rating">
+                            {{ hazard.before_risk_rating }} (Before)
+                          </span>
+                          →
+                          <span class="badge bg-{{ hazard.get_risk_color(hazard.after_risk_rating) }} risk-badge after-risk-rating">
+                            {{ hazard.after_risk_rating }} (After)
+                          </span>
+                        </small>
+                      </div>
+                      <div class="risk-indicator">
+                        <span class="badge bg-{{ hazard.get_risk_color(hazard.after_risk_rating) }} risk-badge">
+                            {{ hazard.after_risk_rating }}
+                        </span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+                
+                <!-- Mitigation Override - FIXED LINE -->
+                <div class="mt-2 mitigation-override" 
+                     id="mitigation_{{ hazard.id }}"
+                     {% if hazard.id not in current_hazard_ids %}style="display: none;"{% endif %}>
+                  <label class="form-label small">Mission-Specific Mitigation (optional):</label>
+                  <textarea class="form-control form-control-sm" 
+                            name="mitigation_{{ hazard.id }}"
+                            placeholder="Add mission-specific mitigation details..."
+                            rows="2">{{ hazard_mitigations.get(hazard.id, '') }}</textarea>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-3">
+            <i class="fas fa-exclamation-triangle fa-lg text-muted mb-2"></i>
+            <p class="text-muted small-text mb-2">No hazards found for your unit.</p>
+            <a href="{{ url_for('add_hazard') }}" class="btn btn-primary btn-sm">
+              <i class="fas fa-plus me-1"></i>Add Hazards First
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Decision Authority -->
+    <div class="card section-card">
+      <div class="card-header bg-info text-white">
+        <h5 class="mb-0">
+          <i class="fas fa-user-shield me-2"></i>4. Decision Authority
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label">Computed Total Risk</label>
+              <input type="text" class="form-control" id="computed_risk" readonly 
+                     placeholder="Risk will be calculated after hazard selection">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Suggested Authority Level</label>
+              <input type="text" class="form-control" id="suggested_authority" readonly 
+                     placeholder="Based on risk calculation">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="authority_level" class="form-label">Select Decision Authority *</label>
+              <select class="form-select" id="authority_level" name="authority_level" required>
+                <option value="">Select Authority Level</option>
+                <option value="Operator" {% if form.authority_level == 'Operator' %}selected{% endif %}>Operator</option>
+                <option value="Supervisor" {% if form.authority_level == 'Supervisor' %}selected{% endif %}>Supervisor</option>
+                <option value="Squadron Commander" {% if form.authority_level == 'Squadron Commander' %}selected{% endif %}>Squadron Commander</option>
+                <option value="Director for Operations" {% if form.authority_level == 'Director for Operations' %}selected{% endif %}>Director for Operations</option>
+                <option value="Commander" {% if form.authority_level == 'Commander' %}selected{% endif %}>Commander</option>
+              </select>
+              <div class="form-text">
+                Based on unit designation and risk level
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Section -->
+    <div class="card">
+      <div class="card-body py-2">
+        <div class="d-flex gap-2 flex-wrap">
+          <button type="submit" class="btn btn-success btn-sm" id="submitBtn">
+            <i class="fas fa-save me-1"></i>Update MRM Form
+          </button>
+          <a href="{{ url_for('view_mrm_forms') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-times me-1"></i>Cancel
+          </a>
+          
+          <!-- Quick Actions -->
+          <div class="btn-group ms-auto" role="group">
+            <a href="{{ url_for('view_mrm', form_id=form.id) }}" class="btn btn-outline-primary btn-sm" title="Preview Form">
+              <i class="fas fa-eye me-1"></i>Preview
+            </a>
+            <a href="{{ url_for('mrm_pdf', form_id=form.id) }}" target="_blank" class="btn btn-outline-danger btn-sm" title="Download PDF">
+              <i class="fas fa-file-pdf me-1"></i>PDF
+            </a>
+            <a href="{{ url_for('submit_mrm', form_id=form.id) }}" class="btn btn-outline-success btn-sm"
+               onclick="return confirm('Submit MRM Form {{ form.mrm_number }} for review?')"
+               title="Submit for Review">
+              <i class="fas fa-paper-plane me-1"></i>Submit
+            </a>
+          </div>
+          
+          <a href="{{ url_for('delete_mrm_creator', form_id=form.id) }}" class="btn btn-danger btn-sm"
+             onclick="return confirm('Are you sure you want to delete MRM Form {{ form.mrm_number }}? This action cannot be undone.')">
+            <i class="fas fa-trash me-1"></i>Delete Form
+          </a>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Risk calculation logic (same as create_mrm.html)
+  function calculateRiskRating() {
+      const selectedHazards = document.querySelectorAll('.hazard-checkbox:checked');
+      let totalRiskScore = 0;
+      let maxPossibleScore = 0;
+      
+      selectedHazards.forEach(checkbox => {
+          const hazardItem = checkbox.closest('.hazard-item');
+          const afterRiskRating = hazardItem.getAttribute('data-after-rating');
+          
+          // Calculate risk score based on after_risk_rating
+          const riskScore = calculateRiskScore(afterRiskRating);
+          totalRiskScore += riskScore;
+          maxPossibleScore += 3; // Maximum score per hazard
+      });
+      
+      return { totalRiskScore, maxPossibleScore };
+  }
+
+  function calculateRiskScore(riskRating) {
+      if (!riskRating) return 0;
+      
+      // Fallback calculation based on risk rating format (e.g., "3C")
+      if (riskRating.match(/^[1-5][A-E]$/)) {
+          const likelihood = parseInt(riskRating[0]);
+          const severity = riskRating[1];
+          
+          // Simple scoring: likelihood * severity weight
+          const severityWeights = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+          const rawScore = likelihood * (severityWeights[severity] || 1);
+          
+          if (rawScore >= 15) return 3;      // High risk
+          else if (rawScore >= 6) return 2;  // Medium risk
+          else return 1;                     // Low risk
+      }
+      
+      return 1; // Default to low risk
+  }
+
+  function calculateRiskPercentage(totalRiskScore, maxPossibleScore) {
+      if (maxPossibleScore === 0) return 0;
+      return Math.round((totalRiskScore / maxPossibleScore) * 100);
+  }
+
+  function determineAuthorityLevel(riskPercentage) {
+    if (riskPercentage <= 50) return "Operator";
+    else if (riskPercentage <= 65) return "Supervisor";
+    else if (riskPercentage <= 75) return "Squadron Commander";
+    else if (riskPercentage <= 85) return "Director for Operations";
+    else return "Commander";
+}
+
+  function updateRiskDisplay() {
+      const { totalRiskScore, maxPossibleScore } = calculateRiskRating();
+      const riskPercentage = calculateRiskPercentage(totalRiskScore, maxPossibleScore);
+      const authorityLevel = determineAuthorityLevel(riskPercentage);
+      
+      // Update computed risk display
+      const computedRiskElement = document.getElementById('computed_risk');
+      if (computedRiskElement) {
+          computedRiskElement.value = `${riskPercentage}% (${totalRiskScore}/${maxPossibleScore})`;
+      }
+      
+      // Update suggested authority
+      const suggestedAuthorityElement = document.getElementById('suggested_authority');
+      if (suggestedAuthorityElement) {
+          suggestedAuthorityElement.value = authorityLevel;
+          
+          // Add visual indicator
+          const authorityColors = {
+              'Operator': 'success',
+              'Supervisor': 'info', 
+              'Squadron Commander': 'warning',
+              'Director for Operations': 'orange',
+              'Commander': 'danger'
+          };
+          
+          suggestedAuthorityElement.className = `form-control bg-${authorityColors[authorityLevel] || 'light'} text-dark`;
+      }
+      
+      // Auto-select the authority level in dropdown
+      const authoritySelect = document.getElementById('authority_level');
+      if (authoritySelect) {
+          for (let option of authoritySelect.options) {
+              if (option.value === authorityLevel) {
+                  option.selected = true;
+                  break;
+              }
+          }
+          
+          // Add visual feedback
+          const authorityColors = {
+              'Operator': 'success',
+              'Supervisor': 'info', 
+              'Squadron Commander': 'warning',
+              'Director for Operations': 'warning',
+              'Commander': 'danger'
+          };
+          authoritySelect.className = `form-select border-2 border-${authorityColors[authorityLevel] || 'secondary'}`;
+      }
+      
+      // Update selected hazards count with risk info
+      const selectedCount = document.querySelectorAll('.hazard-checkbox:checked').length;
+      const countElement = document.getElementById('selectedHazardsCount');
+      if (countElement) {
+          countElement.innerHTML = `${selectedCount} selected <span class="badge bg-${riskPercentage > 75 ? 'danger' : riskPercentage > 50 ? 'warning' : 'success'}">${riskPercentage}% Risk</span>`;
+      }
+
+      // Update hidden form fields for submission
+      document.getElementById('computed_max_risk').value = maxPossibleScore;
+      document.getElementById('computed_residual_risk').value = totalRiskScore;
+      document.getElementById('computed_total_percent').value = riskPercentage;
+  }
+
+  function filterHazards() {
+    const activityCode = document.getElementById("filter_activity_code").value;
+    const hazardItems = document.querySelectorAll(".hazard-item");
+
+    hazardItems.forEach((item) => {
+      if (activityCode === "All" || item.dataset.activity === activityCode) {
+        item.style.display = "block";
+      } else {
+        item.style.display = "none";
+      }
+    });
+  }
+
+  // Toggle mitigation override and update risk calculation
+  function toggleMitigationOverride(checkbox) {
+    const hazardId = checkbox.value;
+    const mitigationDiv = document.getElementById('mitigation_' + hazardId);
+    const hazardItem = checkbox.closest('.hazard-item');
+    
+    if (mitigationDiv) {
+      mitigationDiv.style.display = checkbox.checked ? 'block' : 'none';
+    }
+    
+    if (hazardItem) {
+      if (checkbox.checked) {
+        hazardItem.classList.add('selected');
+        hazardItem.style.borderLeft = '4px solid var(--success)';
+      } else {
+        hazardItem.classList.remove('selected');
+        hazardItem.style.borderLeft = '';
+      }
+    }
+  }
+
+  // Update selected hazards count
+  function updateSelectedHazardsCount() {
+    const selectedCount = document.querySelectorAll('.hazard-checkbox:checked').length;
+    const countElement = document.getElementById('selectedHazardsCount');
+    if (countElement) {
+      countElement.textContent = selectedCount + ' selected';
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize hazards count
+    updateSelectedHazardsCount();
+
+    // Show mitigation override when hazard is selected
+    document.querySelectorAll(".hazard-checkbox").forEach((checkbox) => {
+      checkbox.addEventListener("change", function () {
+        toggleMitigationOverride(this);
+        updateSelectedHazardsCount();
+        updateRiskDisplay(); // Add risk calculation
+      });
+    });
+
+    // I'M SAFE validation
+    const imsafeCheckboxes = document.querySelectorAll(".imsafe-checkbox");
+    const submitBtn = document.getElementById("submitBtn");
+    const imsafeWarning = document.getElementById("imsafeWarning");
+
+    function validateImsafe() {
+      let allChecked = true;
+      imsafeCheckboxes.forEach((cb) => {
+        if (!cb.checked) {
+          allChecked = false;
+        }
+      });
+
+      if (!allChecked) {
+        submitBtn.disabled = true;
+        if (imsafeWarning) imsafeWarning.style.display = "block";
+        submitBtn.title = "All I'M SAFE items must be checked";
+      } else {
+        submitBtn.disabled = false;
+        if (imsafeWarning) imsafeWarning.style.display = "none";
+        submitBtn.title = "Update MRM Form";
+      }
+    }
+
+    imsafeCheckboxes.forEach((cb) => cb.addEventListener("change", validateImsafe));
+
+    // Form submission validation
+    const mrmForm = document.getElementById('mrmForm');
+    if (mrmForm) {
+      mrmForm.addEventListener('submit', function(e) {
+        const selectedHazards = document.querySelectorAll('.hazard-checkbox:checked').length;
+        if (selectedHazards === 0) {
+          e.preventDefault();
+          alert('Please select at least one hazard for this mission.');
+          return false;
+        }
+        
+        // Ensure risk calculation is complete
+        const computedRisk = document.getElementById('computed_risk').value;
+        if (!computedRisk || computedRisk.includes('will be calculated')) {
+          e.preventDefault();
+          alert('Please wait for risk calculation to complete before submitting.');
+          return false;
+        }
+        
+        // Final risk calculation update before submission
+        updateRiskDisplay();
+      });
+    }
+
+    // Add risk calculation to filter changes
+    document.getElementById('filter_activity_code')?.addEventListener('change', function() {
+        setTimeout(updateRiskDisplay, 100);
+    });
+
+    // Initial validation
+    validateImsafe();
+    updateRiskDisplay(); // Initial risk calculation
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,246 @@
+<!-- templates/debug_authority.html -->
+{% extends "base.html" %} {% block title %}Authority Assignments Debug - MRM
+System{% endblock %} {% block content %}
+<div class="container-fluid">
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col">
+        <h1 class="h3 mb-0">
+          <i class="fas fa-bug me-2"></i>Authority Assignments Debug
+        </h1>
+        <p class="text-muted mb-0">
+          Debug information for authority assignments
+        </p>
+      </div>
+      <div class="col-auto">
+        <a href="{{ url_for('view_mrm_forms') }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-2"></i>Back to MRM Forms
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Information -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">User Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-3">
+          <strong>Name:</strong> {{ debug_info.user_info.name }}
+        </div>
+        <div class="col-md-3">
+          <strong>Authority:</strong> {{ debug_info.user_info.authority }}
+        </div>
+        <div class="col-md-3">
+          <strong>Designation:</strong> {{ debug_info.user_info.designation }}
+        </div>
+        <div class="col-md-3">
+          <strong>Unit:</strong> {{ debug_info.user_info.unit }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card bg-info text-white">
+        <div class="card-body text-center">
+          <h3>{{ debug_info.assigned_forms_count }}</h3>
+          <p class="mb-0">Forms Assigned to You</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-warning text-dark">
+        <div class="card-body text-center">
+          <h3>{{ debug_info.potential_assignments_count }}</h3>
+          <p class="mb-0">Potential Assignments</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card bg-secondary text-white">
+        <div class="card-body text-center">
+          <h3>{{ debug_info.all_forms_count }}</h3>
+          <p class="mb-0">Total MRM Forms</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Authority Level Distribution -->
+  <div class="card mb-4">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">Authority Level Distribution</h5>
+    </div>
+    <div class="card-body">
+      {% for level, count in debug_info.all_forms_authority_levels.items() %}
+      <span class="badge bg-primary me-2 mb-2"> {{ level }}: {{ count }} </span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Assigned Forms -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">Forms Assigned to You</h5>
+    </div>
+    <div class="card-body">
+      {% if debug_info.assigned_forms %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>MRM Number</th>
+              <th>Authority Level</th>
+              <th>Approved</th>
+              <th>Status</th>
+              <th>Review Status</th>
+              <th>Activity/Mission</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in debug_info.assigned_forms %}
+            <tr>
+              <td>{{ form.mrm_number }}</td>
+              <td>
+                <span class="badge bg-info">{{ form.authority_level }}</span>
+              </td>
+              <td>
+                <span
+                  class="badge {% if form.authority_approved %}bg-success{% else %}bg-warning{% endif %}"
+                >
+                  {{ 'Yes' if form.authority_approved else 'No' }}
+                </span>
+              </td>
+              <td><span class="badge bg-secondary">{{ form.status }}</span></td>
+              <td>
+                <span class="badge bg-secondary">{{ form.review_status }}</span>
+              </td>
+              <td>{{ form.activity_mission[:50] }}...</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted">No forms are currently assigned to you.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Potential Assignments -->
+  <div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0">Potential Assignments (Based on Your Designation)</h5>
+    </div>
+    <div class="card-body">
+      {% if debug_info.potential_assignments %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>MRM Number</th>
+              <th>Authority Level</th>
+              <th>Currently Assigned To</th>
+              <th>Creator Unit</th>
+              <th>Status</th>
+              <th>Review Status</th>
+              <th>Activity/Mission</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in debug_info.potential_assignments %}
+            <tr>
+              <td>{{ form.mrm_number }}</td>
+              <td>
+                <span class="badge bg-info">{{ form.authority_level }}</span>
+              </td>
+              <td>
+                {% if form.authority_assigned_to %}
+                <span class="badge bg-warning"
+                  >User {{ form.authority_assigned_to }}</span
+                >
+                {% else %}
+                <span class="badge bg-danger">Not Assigned</span>
+                {% endif %}
+              </td>
+              <td>{{ form.creator_unit }}</td>
+              <td><span class="badge bg-secondary">{{ form.status }}</span></td>
+              <td>
+                <span class="badge bg-secondary">{{ form.review_status }}</span>
+              </td>
+              <td>{{ form.activity_mission[:50] }}...</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted">
+        No potential assignments found for your designation.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="card">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">Actions</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <button onclick="fixAssignments()" class="btn btn-primary w-100">
+            <i class="fas fa-wrench me-2"></i>Fix All Authority Assignments
+          </button>
+          <small class="text-muted d-block mt-2">
+            Admin only: Reassign all MRM forms to appropriate authorities
+          </small>
+        </div>
+        <div class="col-md-6">
+          <a
+            href="{{ url_for('view_mrm_forms') }}?authority_pending=true"
+            class="btn btn-success w-100"
+          >
+            <i class="fas fa-list me-2"></i>View My Pending Approvals
+          </a>
+          <small class="text-muted d-block mt-2">
+            View forms assigned to you that need approval
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  function fixAssignments() {
+    if (
+      !confirm(
+        "This will reassign all MRM forms to appropriate authorities. Continue?"
+      )
+    ) {
+      return;
+    }
+
+    fetch('{{ url_for("fix_all_authority_assignments") }}')
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          alert(`Success: ${data.message}`);
+          location.reload();
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      })
+      .catch((error) => {
+        alert("Error fixing assignments: " + error);
+      });
+  }
+</script>
+{% endblock %}

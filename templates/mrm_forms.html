@@ -1,0 +1,634 @@
+<!-- templates/mrm_forms.html -->
+{% extends "base.html" %}
+{% block title %}MRM Forms - Mission Risk Management{% endblock %}
+
+{% block extra_css %}
+<style>
+  .table-modern {
+    font-size: 0.85rem;
+  }
+  
+  .table-modern th {
+    padding: 8px 6px;
+    font-weight: 600;
+  }
+  
+  .table-modern td {
+    padding: 6px 4px;
+    vertical-align: middle;
+  }
+  
+  .badge-sm {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .btn-group-sm .btn {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .search-box {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.75rem;
+  }
+  
+  /* Ensure table fits container */
+  .table-responsive {
+    margin: 0 -0.5rem;
+  }
+  
+  /* Compact action buttons */
+  .action-buttons {
+    white-space: nowrap;
+  }
+  
+  .action-buttons .btn {
+    margin: 1px;
+    font-size: 0.75rem;
+  }
+
+  /* Review button styling */
+  .btn-review {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+    color: white;
+  }
+
+  .btn-review:hover {
+    background: linear-gradient(135deg, #218838, #1e9e8a);
+    color: white;
+    transform: translateY(-1px);
+  }
+
+  /* Priority styling for submitted forms */
+  .priority-submitted {
+    animation: pulse-submitted 2s infinite;
+  }
+
+  @keyframes pulse-submitted {
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+  }
+
+  /* Authority assignment styling */
+  .authority-pending {
+    background: linear-gradient(90deg, rgba(255,193,7,0.1) 0%, rgba(255,255,255,1) 100%);
+    border-left: 4px solid #ffc107;
+  }
+
+  .authority-approved {
+    background: linear-gradient(90deg, rgba(40,167,69,0.1) 0%, rgba(255,255,255,1) 100%);
+    border-left: 4px solid #28a745;
+  }
+
+  /* Pagination styling */
+  .pagination-container {
+    background: white;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem;
+  }
+
+  .page-info {
+    font-size: 0.85rem;
+    color: #6c757d;
+  }
+
+  .pagination .page-link {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .pagination .page-item.active .page-link {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h4 mb-1">
+                <i class="fas fa-clipboard-list me-2 text-primary"></i>MRM Forms
+            </h1>
+            <p class="text-muted mb-0 small">Manage Mission Risk Management forms</p>
+        </div>
+        <div class="col-auto">
+            {% if current_user.authority in ['Administrator', 'Evaluator', 'Creator'] %}
+            <a href="{{ url_for('create_mrm') }}" class="btn btn-modern btn-sm">
+                <i class="fas fa-plus me-1"></i>Create New
+            </a>
+            {% endif %}
+            
+            <!-- Debug button for authority users -->
+            {% if current_user.designation in ['Squadron Commander', 'Director for Operations', 'Commander'] %}
+            <a href="{{ url_for('debug_authority_assignments') }}" class="btn btn-outline-info btn-sm ms-2">
+                <i class="fas fa-bug me-1"></i>Debug
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="glass-card mb-3 p-3">
+        <form method="GET" class="row g-2 align-items-end">
+            <input type="hidden" name="page" value="1"> <!-- Reset to page 1 on new search -->
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Search</label>
+                <input type="text" 
+                       name="search" 
+                       class="form-control search-box" 
+                       placeholder="Search mission, objectives, or MRM number..."
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select class="form-select search-box" name="status">
+                    <option value="">All Status</option>
+                    <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Submitted</option>
+                    <option value="reviewed" {% if status_filter == 'reviewed' %}selected{% endif %}>Reviewed</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-modern w-100 btn-sm">
+                    <i class="fas fa-filter me-1"></i>Filter
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('view_mrm_forms') }}" class="btn btn-outline-secondary w-100 btn-sm">
+                    <i class="fas fa-refresh me-1"></i>Reset
+                </a>
+            </div>
+            <div class="col-md-1">
+                <span class="badge bg-primary">{{ forms.total }}</span>
+            </div>
+        </form>
+
+        <!-- Active Filters Display -->
+        {% if status_filter or reviewed_by_filter or search_query or authority_pending %}
+        <div class="mt-2">
+            <small class="text-muted">Active filters:</small>
+            {% if status_filter %}
+            <span class="badge bg-info badge-sm me-1">Status: {{ status_filter|title }}</span>
+            {% endif %}
+            {% if reviewed_by_filter %}
+            <span class="badge bg-warning badge-sm me-1">My Reviews</span>
+            {% endif %}
+            {% if authority_pending %}
+            <span class="badge bg-danger badge-sm me-1">My Authority Approvals</span>
+            {% endif %}
+            {% if search_query %}
+            <span class="badge bg-primary badge-sm me-1">Search: "{{ search_query }}"</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Authority User Notice -->
+        {% if current_user.designation in ['Squadron Commander', 'Director for Operations', 'Commander', 'Supervisor', 'Operator'] %}
+        <div class="mt-2">
+            <small class="text-muted">
+                <i class="fas fa-user-shield me-1"></i>
+                Your designation: <strong>{{ current_user.designation }}</strong>
+                {% if pending_authority_approvals and pending_authority_approvals > 0 %}
+                | <span class="text-danger">
+                    <i class="fas fa-exclamation-circle me-1"></i>
+                    {{ pending_authority_approvals }} pending approval(s)
+                </span>
+                {% endif %}
+            </small>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Quick Actions for Authority Users -->
+    {% if current_user.designation in ['Squadron Commander', 'Director for Operations', 'Commander'] and not authority_pending %}
+    <div class="alert alert-info mb-3">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-user-shield me-3"></i>
+            <div class="flex-grow-1">
+                <strong>Authority User Quick Access:</strong> 
+                <a href="{{ url_for('view_mrm_forms') }}?authority_pending=true" class="btn btn-sm btn-warning ms-2">
+                    <i class="fas fa-list me-1"></i>Show My Pending Approvals
+                </a>
+                <small class="text-muted ms-2">View only forms that need your authorization</small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- MRM Forms Table -->
+    <div class="glass-card">
+        <div class="table-responsive">
+            <table class="table table-modern table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th width="8%">MRM Number</th>
+                        <th width="20%">Activity/Mission</th>
+                        <th width="12%">Created By</th>
+                        <th width="8%">Status</th>
+                        <th width="10%">Signatures</th>
+                        <th width="10%">Required Authority</th>
+                        <th width="10%">Assigned Authority</th>
+                        <th width="10%">Authority Status</th>
+                        <th width="8%">Date</th>
+                        <th width="10%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for form in forms.items %}
+                    <tr class="{% if form.status == 'submitted' and current_user.authority == 'Evaluator' and form.reviewed_by == current_user.id %}priority-submitted{% endif %}
+                               {% if form.authority_assigned_to == current_user.id and not form.authority_approved %}authority-pending{% endif %}
+                               {% if form.authority_approved %}authority-approved{% endif %}">
+                        <td>
+                            <strong class="small text-primary" style="font-family: 'Courier New', monospace;">
+                                {{ form.mrm_number }}
+                            </strong>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-tasks text-primary me-2 mt-1 small"></i>
+                                <div>
+                                    <div class="fw-semibold small">{{ form.activity_mission[:40] }}{% if form.activity_mission|length > 40 %}...{% endif %}</div>
+                                    <small class="text-muted">{{ form.safety_objectives[:50] }}{% if form.safety_objectives|length > 50 %}...{% endif %}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="small">
+                            {% if form_creators and form_creators.get(form.created_by) %}
+                            {{ form_creators.get(form.created_by) }}
+                            {% else %}
+                            <span class="text-muted">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% set status_badge = {
+                                'draft': 'bg-secondary',
+                                'submitted': 'bg-warning text-dark',
+                                'reviewed': 'bg-success'
+                            } %}
+                            <span class="badge {{ status_badge.get(form.status, 'bg-primary') }} badge-sm">
+                                {{ form.status|title }}
+                            </span>
+                            {% if form.review_status and form.review_status != 'pending' %}
+                            <br>
+                            <small class="text-muted badge-sm">{{ form.review_status|title }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column gap-1">
+                                <span class="badge {% if form.creator_signed %}bg-success{% else %}bg-secondary{% endif %} badge-sm">
+                                    <i class="fas fa-{% if form.creator_signed %}check{% else %}clock{% endif %} me-1"></i>Creator
+                                </span>
+                                <span class="badge {% if form.evaluator_signed %}bg-info{% else %}bg-secondary{% endif %} badge-sm">
+                                    <i class="fas fa-{% if form.evaluator_signed %}check{% else %}clock{% endif %} me-1"></i>Evaluator
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if form.authority_level %}
+                            {% set authority_badge = {
+                                'Operator': 'bg-success',
+                                'Supervisor': 'bg-info',
+                                'Squadron Commander': 'bg-warning',
+                                'Director for Operations': 'bg-orange',
+                                'Commander': 'bg-danger'
+                            } %}
+                            <span class="badge {{ authority_badge.get(form.authority_level, 'bg-secondary') }} badge-sm">
+                                {{ form.authority_level }}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary badge-sm">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if form.authority_assigned_to and form_authorities and form_authorities.get(form.authority_assigned_to) %}
+                                {% set authority_info = form_authorities[form.authority_assigned_to] %}
+                                <div class="small">
+                                    <strong>{{ authority_info.name }}</strong>
+                                    <br>
+                                    <span class="badge bg-secondary badge-sm">{{ authority_info.designation or 'Authority' }}</span>
+                                </div>
+                            {% elif form.authority_level %}
+                                <div class="small">
+                                    <span class="badge bg-info badge-sm">{{ form.authority_level }}</span>
+                                    <br>
+                                    <span class="badge bg-danger badge-sm">Not Assigned</span>
+                                </div>
+                            {% else %}
+                                <span class="badge bg-secondary badge-sm">Not Required</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if form.authority_assigned_to %}
+                                {% if form.authority_approved %}
+                                    <span class="badge bg-success badge-sm">Approved</span>
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ form.authority_approval_date.strftime('%m/%d/%y') if form.authority_approval_date }}
+                                    </small>
+                                {% else %}
+                                    <span class="badge bg-warning badge-sm">Pending</span>
+                                    {% if form.authority_assigned_to == current_user.id %}
+                                    <br>
+                                    <small class="text-danger">
+                                        <i class="fas fa-exclamation-circle"></i> Your approval needed
+                                    </small>
+                                    {% endif %}
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary badge-sm">Not Assigned</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">
+                            {{ form.date_created.strftime('%m/%d/%Y') }}
+                            <br>
+                            <small class="text-muted">{{ form.date_created.strftime('%H:%M') }}</small>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <!-- View Button -->
+                                <a href="{{ url_for('view_mrm', form_id=form.id) }}" class="btn btn-outline-primary btn-sm mb-1" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+
+                                <!-- PDF Button -->
+                                <a href="{{ url_for('mrm_pdf', form_id=form.id) }}" target="_blank" class="btn btn-outline-danger btn-sm mb-1" title="PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+
+                                <!-- Review Button for Evaluators -->
+                                {% if current_user.authority in ['Evaluator', 'Administrator'] and form.status == 'submitted' and form.reviewed_by == current_user.id %}
+                                <a href="{{ url_for('review_mrm', form_id=form.id) }}" class="btn btn-review btn-sm mb-1" title="Review MRM">
+                                    <i class="fas fa-clipboard-check"></i>
+                                </a>
+                                {% endif %}
+
+                                <!-- Authority Approval Button -->
+                                {% if form.authority_assigned_to == current_user.id and not form.authority_approved and form.review_status == 'approved' %}
+                                <a href="{{ url_for('view_mrm', form_id=form.id) }}#authority-approval" class="btn btn-warning btn-sm mb-1" title="Approve as Authority">
+                                    <i class="fas fa-user-shield"></i>
+                                </a>
+                                {% endif %}
+
+                                <!-- Creator Actions for Draft Forms -->
+                                {% if current_user.authority in ['Creator'] and form.created_by == current_user.id and form.status == 'draft' %}
+                                    <!-- Edit Button -->
+                                    <a href="{{ url_for('edit_mrm', form_id=form.id) }}" class="btn btn-outline-warning btn-sm mb-1" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+
+                                    <!-- Delete Button -->
+                                    <form method="POST" action="{{ url_for('delete_mrm_creator', form_id=form.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" 
+                                                onclick="return confirm('Are you sure you want to delete MRM Form {{ form.mrm_number }}? This action cannot be undone.')"
+                                                title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- Submit Button -->
+                                    <a href="{{ url_for('submit_mrm', form_id=form.id) }}" class="btn btn-outline-success btn-sm mb-1"
+                                       onclick="return confirm('Submit MRM Form {{ form.mrm_number }} for review?')"
+                                       title="Submit for Review">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </a>
+                                {% endif %}
+
+                                <!-- Admin Delete Button -->
+                                {% if current_user.authority == 'Administrator' %}
+                                <form method="POST" action="{{ url_for('delete_mrm', form_id=form.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" 
+                                            onclick="return confirm('Delete MRM Form {{ form.mrm_number }}?')"
+                                            title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <i class="fas fa-clipboard-list fa-2x text-muted mb-2 opacity-50"></i>
+                            
+                            <!-- Different messages based on user type and filters -->
+                            {% if authority_pending %}
+                            <p class="text-muted small mb-2">No pending authority approvals found.</p>
+                            <p class="text-muted extra-small mb-3">
+                                All MRM forms requiring your authorization have been approved.
+                            </p>
+                            {% elif current_user.designation in ['Squadron Commander', 'Director for Operations', 'Commander'] %}
+                            <p class="text-muted small mb-2">No MRM forms found assigned to you.</p>
+                            <div class="alert alert-warning small mx-auto" style="max-width: 500px;">
+                                <h6 class="alert-heading mb-2">
+                                    <i class="fas fa-user-shield me-2"></i>Authority User Notice
+                                </h6>
+                                <p class="mb-2">As <strong>{{ current_user.designation }}</strong>, you should see MRM forms assigned to you for approval here.</p>
+                                <p class="mb-1 small">Possible reasons why no forms are showing:</p>
+                                <ul class="small text-start mb-2">
+                                    <li>No MRM forms currently require {{ current_user.designation }} level approval</li>
+                                    <li>Forms are not being properly assigned to authorities</li>
+                                    <li>All assigned forms have already been approved</li>
+                                </ul>
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <a href="{{ url_for('debug_authority_assignments') }}" class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-bug me-1"></i>Debug Assignments
+                                    </a>
+                                    {% if current_user.authority == 'Administrator' %}
+                                    <button onclick="fixAssignments()" class="btn btn-sm btn-outline-warning">
+                                        <i class="fas fa-wrench me-1"></i>Fix Assignments
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <p class="text-muted small mb-2">No MRM forms found.</p>
+                            {% endif %}
+                            
+                            {% if current_user.authority in ['Administrator', 'Evaluator', 'Creator'] and not authority_pending %}
+                            <a href="{{ url_for('create_mrm') }}" class="btn btn-primary btn-sm mt-2">
+                                Create First MRM
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if forms.pages > 1 %}
+        <div class="pagination-container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="page-info">
+                    Showing {{ forms.items|length }} of {{ forms.total }} forms
+                    (Page {{ forms.page }} of {{ forms.pages }})
+                </div>
+                
+                <nav aria-label="MRM forms pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <!-- Previous Page -->
+                        <li class="page-item {% if not forms.has_prev %}disabled{% endif %}">
+                            <a class="page-link" 
+                               href="{{ url_for('view_mrm_forms', page=forms.prev_num, search=search_query, status=status_filter, reviewed_by=reviewed_by_filter, authority_pending=authority_pending) }}"
+                               aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+
+                        <!-- Page Numbers -->
+                        {% for page_num in forms.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                            {% if page_num %}
+                                <li class="page-item {% if page_num == forms.page %}active{% endif %}">
+                                    <a class="page-link" 
+                                       href="{{ url_for('view_mrm_forms', page=page_num, search=search_query, status=status_filter, reviewed_by=reviewed_by_filter, authority_pending=authority_pending) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        <!-- Next Page -->
+                        <li class="page-item {% if not forms.has_next %}disabled{% endif %}">
+                            <a class="page-link" 
+                               href="{{ url_for('view_mrm_forms', page=forms.next_num, search=search_query, status=status_filter, reviewed_by=reviewed_by_filter, authority_pending=authority_pending) }}"
+                               aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        <div>
+            <br><br>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Help Section -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="alert alert-info">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-info-circle fa-lg me-3"></i>
+                    <div>
+                        <h6 class="alert-heading mb-1">Status Legend</h6>
+                        <p class="mb-0 small">
+                            <span class="badge bg-secondary me-1">Draft</span> 
+                            <span class="badge bg-warning me-1">Submitted</span> 
+                            <span class="badge bg-success me-1">Reviewed</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="alert alert-warning">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user-shield fa-lg me-3"></i>
+                    <div>
+                        <h6 class="alert-heading mb-1">Authority Colors</h6>
+                        <p class="mb-0 small">
+                            <span class="badge bg-success me-1">Operator</span>
+                            <span class="badge bg-info me-1">Supervisor</span>
+                            <span class="badge bg-warning me-1">Squadron Commander</span>
+                            <span class="badge bg-orange me-1">Director</span>
+                            <span class="badge bg-danger me-1">Commander</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authority User Instructions -->
+    {% if current_user.designation in ['Squadron Commander', 'Director for Operations', 'Commander'] and not authority_pending %}
+    <div class="alert alert-success mt-3">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-user-shield fa-lg me-3"></i>
+            <div>
+                <h6 class="alert-heading mb-1">Authority Approval Instructions</h6>
+                <p class="mb-0 small">
+                    As <strong>{{ current_user.designation }}</strong>, you can approve MRM forms assigned to you. 
+                    Click the <span class="badge bg-warning badge-sm"><i class="fas fa-user-shield"></i></span> button to review and approve forms.
+                    Forms requiring your approval are highlighted with a yellow border.
+                    <a href="{{ url_for('view_mrm_forms') }}?authority_pending=true" class="btn btn-sm btn-outline-warning ms-2">
+                        Show Only My Pending Approvals
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add visual emphasis for forms needing review
+    const reviewRows = document.querySelectorAll('.priority-submitted');
+    reviewRows.forEach(row => {
+        row.style.borderLeft = '4px solid #ffc107';
+    });
+
+    // Add visual emphasis for forms needing authority approval
+    const authorityRows = document.querySelectorAll('.authority-pending');
+    authorityRows.forEach(row => {
+        row.style.borderLeft = '4px solid #dc3545';
+    });
+
+    // Auto-refresh the page every 2 minutes if there are pending reviews or authority approvals
+    const pendingReviews = document.querySelectorAll('.btn-review').length;
+    const pendingAuthority = document.querySelectorAll('.authority-pending').length;
+    
+    if (pendingReviews > 0 || pendingAuthority > 0) {
+        setTimeout(() => {
+            window.location.reload();
+        }, 120000); // 2 minutes
+    }
+});
+
+// Fix assignments function for admin users
+function fixAssignments() {
+    if (!confirm('This will reassign all MRM forms to appropriate authorities. Continue?')) {
+        return;
+    }
+    
+    fetch('{{ url_for("fix_all_authority_assignments") }}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Success: ${data.message}`);
+                location.reload();
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            alert('Error fixing assignments: ' + error);
+        });
+}
+</script>
+
+<style>
+.bg-orange {
+    background-color: #fd7e14 !important;
+    color: white !important;
+}
+</style>
+{% endblock %}

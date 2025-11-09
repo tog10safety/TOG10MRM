@@ -1,0 +1,434 @@
+<!-- templates/review_mrm.html -->
+
+{% extends "base.html" %} {% block title %}Review MRM Form - Mission Risk
+Management{% endblock %} {% block content %}
+<div class="container-fluid">
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col">
+        <h1 class="h3 mb-0">
+          <i class="fas fa-check-circle me-2"></i>Review MRM Form
+        </h1>
+        <p class="text-muted mb-0">
+          Review and approve/reject MRM Form #{{ form.mrm_number }}
+        </p>
+      </div>
+      <div class="col-auto">
+        <a href="{{ url_for('view_mrm_forms') }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-2"></i>Back to Forms
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- MRM Form Details -->
+  <div class="card">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">MRM Form Details</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>Mission/Activity:</strong> {{ form.activity_mission }}</p>
+          <p>
+            <strong>Created By:</strong> {{ creator.get_full_name() if creator
+            else 'Unknown User' }}
+          </p>
+          <p>
+            <strong>Unit:</strong> {{ creator.unit if creator else 'Unknown' }}
+          </p>
+        </div>
+        <div class="col-md-6">
+          <p>
+            <strong>Date Created:</strong> {{
+            form.date_created.strftime('%Y-%m-%d %H:%M') }}
+          </p>
+          <p>
+            <strong>Current Status:</strong>
+            <span class="badge bg-warning">{{ form.status|title }}</span>
+          </p>
+          <p>
+            <strong>Required Authority:</strong>
+            <span class="badge bg-info">{{ form.authority_level }}</span>
+          </p>
+        </div>
+      </div>
+      <div class="mt-3">
+        <p><strong>Safety Objectives:</strong></p>
+        <div class="alert alert-light border">{{ form.safety_objectives }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review Action -->
+  <div class="card mt-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Review Action</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="mb-3">
+          <label for="review_status" class="form-label"
+            >Review Decision *</label
+          >
+          <select
+            class="form-select"
+            id="review_status"
+            name="review_status"
+            required
+          >
+            <option value="">-- Select Decision --</option>
+            <option value="approved">Approve</option>
+            <option value="rejected">Reject</option>
+            <option value="needs_revision">Needs Revision</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="review_notes" class="form-label"
+            >Review Notes (Optional)</label
+          >
+          <textarea
+            class="form-control"
+            id="review_notes"
+            name="review_notes"
+            rows="4"
+            placeholder="Add any comments or feedback for the creator..."
+          ></textarea>
+        </div>
+
+        <div class="mb-3 form-check">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="auto_sign"
+            name="auto_sign"
+            value="true"
+            checked
+          />
+          <label class="form-check-label" for="auto_sign">
+            Automatically add my signature upon approval
+          </label>
+          {% if not current_user.signature_filename %}
+          <div class="form-text text-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            You need to
+            <a href="{{ url_for('upload_signature') }}" target="_blank"
+              >upload your signature</a
+            >
+            first to use auto-sign.
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-check me-2"></i>Submit Review
+          </button>
+          <a href="{{ url_for('view_mrm_forms') }}" class="btn btn-secondary"
+            >Cancel</a
+          >
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Authority Assignment & Unit Designations -->
+<!-- In the authority assignment section of review_mrm.html -->
+<div class="card mt-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0">
+            <i class="fas fa-user-check me-2"></i>Authority Assignment & Unit Designations
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Designation-Based Assignment:</strong> Upon approval, this MRM will be assigned to a user with <strong>{{ form.authority_level }}</strong> designation in <strong>{{ creator.unit if creator else 'the unit' }}</strong>.
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <strong>Required Designation:</strong>
+                    <span class="badge bg-primary ms-2">{{ form.authority_level }}</span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Assignment Logic:</strong>
+                    <ul class="mb-0 mt-2">
+                        {% if form.authority_level == 'Operator' %}
+                        <li><strong>Operator:</strong> Creator approves their own MRM</li>
+                        {% elif form.authority_level == 'Supervisor' %}
+                        <li><strong>Supervisor:</strong> You (the evaluator) will provide final approval</li>
+                        {% else %}
+                        <li><strong>{{ form.authority_level }}:</strong> User with {{ form.authority_level }} designation in {{ creator.unit if creator else 'the unit' }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Current Assignment Status -->
+                <div class="mb-3">
+                    <strong>Assigned Authority:</strong>
+                    {% if form.authority_level == 'Operator' %}
+                    <div class="mt-2 p-3 bg-success bg-opacity-10 rounded">
+                        <i class="fas fa-user text-success me-2"></i>
+                        <span>{{ creator.get_full_name() if creator else 'Creator' }}</span>
+                        <span class="badge bg-success ms-2">Operator (Creator)</span>
+                    </div>
+                    {% elif form.authority_level == 'Supervisor' %}
+                    <div class="mt-2 p-3 bg-info bg-opacity-10 rounded">
+                        <i class="fas fa-user-tie text-info me-2"></i>
+                        <span>{{ current_user.get_full_name() }}</span>
+                        <span class="badge bg-info ms-2">Supervisor (You)</span>
+                    </div>
+                    {% else %}
+                    {% set authority_user = None %}
+                    {% for user in potential_authorities %}
+                        {% if user.designation == form.authority_level %}
+                            {% set authority_user = user %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if authority_user %}
+                    <div class="mt-2 p-3 bg-warning bg-opacity-10 rounded">
+                        <i class="fas fa-user-shield text-warning me-2"></i>
+                        <span>{{ authority_user.get_full_name() }}</span>
+                        <span class="badge bg-warning ms-2">{{ authority_user.designation }}</span>
+                        <br />
+                        <small class="text-muted">
+                            <i class="fas fa-id-badge me-1"></i>
+                            Designation: {{ authority_user.designation }}
+                        </small>
+                        <br />
+                        <small class="text-muted">
+                            <i class="fas fa-phone me-1"></i>
+                            {% if authority_user.contact_number %} {{ authority_user.contact_number }} {% else %} No contact number {% endif %}
+                        </small>
+                    </div>
+                    {% else %}
+                    <div class="mt-2 p-3 bg-danger bg-opacity-10 rounded">
+                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                        <span class="text-danger">No user with {{ form.authority_level }} designation in {{ creator.unit if creator else 'this unit' }}</span>
+                        <div class="form-text text-danger">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Contact administrator to assign the {{ form.authority_level }} designation to a user in {{ creator.unit if creator else 'this unit' }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Available Designations in Unit -->
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <strong>Available Designations in {{ creator.unit if creator else 'Unit' }}:</strong>
+                    {% if potential_authorities %}
+                    <div class="mt-2">
+                        {% for user in potential_authorities %}
+                        <div class="card mb-2 border-0 bg-light">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ user.get_full_name() }}</strong>
+                                        <br />
+                                        <span class="badge {% if user.designation == 'Commander' %}bg-danger {% elif user.designation == 'Director for Operations' %}bg-warning {% elif user.designation == 'Squadron Commander' %}bg-primary {% elif user.designation == 'Supervisor' %}bg-info {% else %}bg-success{% endif %}">
+                                            {{ user.designation }}
+                                        </span>
+                                        {% if user.contact_number %}
+                                        <br />
+                                        <small class="text-muted">
+                                            <i class="fas fa-phone me-1"></i>{{ user.contact_number }}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted d-block">{{ user.authority }}</small>
+                                        {% if user.designation == form.authority_level %}
+                                        <span class="badge bg-success">Will be assigned</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="mt-2 p-3 bg-warning bg-opacity-10 rounded">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        <span>No users with required designations found in {{ creator.unit if creator else 'this unit' }}</span>
+                        <div class="form-text">
+                            Users need to set their designations in their profiles for automatic assignment.
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+          <!-- Authority Level Requirements -->
+          <div class="mt-3 p-3 bg-light rounded">
+            <h6 class="mb-2">
+              <i class="fas fa-list-alt me-2"></i>Authority Levels by Risk:
+            </h6>
+            <div class="small">
+              <div
+                class="d-flex justify-content-between align-items-center mb-2 p-1 {% if form.authority_level == 'Operator' %}bg-primary bg-opacity-10 rounded{% endif %}"
+              >
+                <span>≤50% Risk:</span>
+                <span class="badge bg-success">Operator</span>
+              </div>
+              <div
+                class="d-flex justify-content-between align-items-center mb-2 p-1 {% if form.authority_level == 'Supervisor' %}bg-primary bg-opacity-10 rounded{% endif %}"
+              >
+                <span>51-65% Risk:</span>
+                <span class="badge bg-info">Supervisor</span>
+              </div>
+              <div
+                class="d-flex justify-content-between align-items-center mb-2 p-1 {% if form.authority_level == 'Squadron Commander' %}bg-primary bg-opacity-10 rounded{% endif %}"
+              >
+                <span>66-75% Risk:</span>
+                <span class="badge bg-warning">Squadron Commander</span>
+              </div>
+              <div
+                class="d-flex justify-content-between align-items-center mb-2 p-1 {% if form.authority_level == 'Director for Operations' %}bg-primary bg-opacity-10 rounded{% endif %}"
+              >
+                <span>76-85% Risk:</span>
+                <span class="badge bg-orange">Director for Operations</span>
+              </div>
+              <div
+                class="d-flex justify-content-between align-items-center p-1 {% if form.authority_level == 'Commander' %}bg-primary bg-opacity-10 rounded{% endif %}"
+              >
+                <span>86-100% Risk:</span>
+                <span class="badge bg-danger">Commander</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Risk Information -->
+      {% if form.total_percent %}
+      <div class="row mt-3">
+        <div class="col-12">
+          <div class="alert alert-secondary">
+            <div class="row">
+              <div class="col-md-4">
+                <strong>Computed Risk:</strong>
+                <div class="h5 mb-0">
+                  {{ "%.1f"|format(form.total_percent) }}%
+                </div>
+              </div>
+              <div class="col-md-4">
+                <strong>Residual Risk:</strong>
+                <div class="h5 mb-0">
+                  {{ form.residual_risk or 0 }}/{{ form.max_risk or 0 }}
+                </div>
+              </div>
+              <div class="col-md-4">
+                <strong>Authority Required:</strong>
+                <div class="h5 mb-0">
+                  <span class="badge bg-primary"
+                    >{{ form.authority_level }}</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Quick Actions for Administrators -->
+  {% if current_user.authority == 'Administrator' %}
+  <div class="card mt-4">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">
+        <i class="fas fa-tools me-2"></i>Administrator Actions
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <a
+            href="{{ url_for('manage_users') }}"
+            class="btn btn-outline-primary btn-sm"
+          >
+            <i class="fas fa-users-cog me-2"></i>Manage Users & Designations
+          </a>
+          <div class="form-text mt-1">
+            Assign designations to users for automatic authority assignment
+          </div>
+        </div>
+        <div class="col-md-6">
+          {% if current_user.authority == 'Administrator' %}
+          <a
+            href="{{ url_for('designation_report') }}"
+            class="btn btn-outline-info btn-sm"
+          >
+            <i class="fas fa-id-badge me-2"></i>View Full Designation Report
+          </a>
+          <div class="form-text mt-1">
+            See all users with designations across all units
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Important Notes -->
+  <div class="card mt-4">
+    <div class="card-header bg-light">
+      <h5 class="mb-0">
+        <i class="fas fa-exclamation-circle me-2"></i>Important Notes
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <h6>Approval Workflow:</h6>
+          <ul class="small">
+            <li>
+              <strong>Approve:</strong> MRM moves to next authority level for
+              final signature
+            </li>
+            <li>
+              <strong>Reject:</strong> MRM is rejected and returned to creator
+            </li>
+            <li>
+              <strong>Needs Revision:</strong> MRM is returned to creator for
+              modifications
+            </li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <h6>Designation-based Assignment:</h6>
+          <ul class="small">
+            <li>System automatically finds users with matching designations</li>
+            <li>Only active users in the same unit are considered</li>
+            <li>If no user found, MRM cannot proceed to final approval</li>
+            <li>Contact administrator to assign missing designations</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .bg-orange {
+    background-color: #fd7e14 !important;
+  }
+  .bg-opacity-10 {
+    --bs-bg-opacity: 0.1;
+  }
+</style>
+{% endblock %}

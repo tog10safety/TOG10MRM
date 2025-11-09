@@ -1,0 +1,363 @@
+<!-- templates/index.html -->
+
+{% extends "base.html" %} {% block title %}Dashboard - Mission Risk Management{%
+endblock %} {% block extra_css %}
+<style>
+  .dashboard-stats {
+    padding: 2rem;
+  }
+
+  .stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    border-left: 4px solid var(--secondary);
+    transition: all 0.3s ease;
+    height: 100%;
+    position: relative;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .stat-card.warning {
+    border-left-color: var(--warning);
+  }
+  .stat-card.success {
+    border-left-color: var(--success);
+  }
+  .stat-card.danger {
+    border-left-color: var(--danger);
+  }
+  .stat-card.info {
+    border-left-color: var(--info);
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.9rem;
+    color: var(--dark);
+    font-weight: 500;
+  }
+
+  .stat-icon {
+    font-size: 3rem;
+    opacity: 0.3;
+    color: var(--secondary);
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .quick-actions {
+    padding: 0 2rem 2rem;
+  }
+
+  .action-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s;
+    height: 100%;
+    border: 2px solid transparent;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .action-card:hover {
+    border-color: var(--secondary);
+    transform: translateY(-3px);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .action-card i {
+    font-size: 2.5rem;
+    color: var(--secondary);
+    margin-bottom: 1rem;
+  }
+
+  /* Remove extra padding to bring footer up */
+  .main-content {
+    min-height: calc(100vh - 200px);
+  }
+
+  /* Clickable stat cards */
+  .clickable-stat {
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .clickable-stat:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Pulse animation for pending reviews */
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.02);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .pulse-animation {
+    animation: pulse 2s infinite;
+  }
+
+  .pulse-animation:hover {
+    animation: none;
+  }
+
+  /* Notification badge */
+  .notification-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--danger);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="main-content">
+  <!-- Dashboard Stats -->
+  <div class="dashboard-stats">
+    <div class="row g-4">
+      <!-- Hazard Count -->
+      <div class="col-md-3">
+        <div class="stat-card">
+          <div class="stat-number">{{ hazard_count }}</div>
+          <div class="stat-label">
+            {% if current_user.authority == 'Administrator' %}Total Hazards{%
+            else %}Unit Mission Risk Registry{% endif %}
+          </div>
+          <i class="fas fa-exclamation-triangle stat-icon"></i>
+        </div>
+      </div>
+
+      <!-- MRM Forms Count -->
+      <div class="col-md-3">
+        <div class="stat-card warning">
+          <div class="stat-number">{{ mrm_count }}</div>
+          <div class="stat-label">
+            {% if current_user.authority == 'Administrator' %}All MRM Forms{%
+            elif current_user.authority == 'Evaluator' %}Assigned MRMs{% else
+            %}Approved MRM Forms{% endif %}
+          </div>
+          <i class="fas fa-clipboard-list stat-icon"></i>
+        </div>
+      </div>
+      <div class="col-md-3">
+        {% if pending_authority_approvals > 0 %}
+        <a
+          href="{{ url_for('view_mrm_forms') }}?authority_pending=true"
+          class="stat-card danger clickable-stat pulse-animation"
+          style="display: block"
+        >
+          <div class="stat-number">{{ pending_authority_approvals }}</div>
+          <div class="stat-label">Pending Authority Approvals</div>
+          <i class="fas fa-user-shield stat-icon"></i>
+          <div class="notification-badge">
+            {{ pending_authority_approvals }}
+          </div>
+        </a>
+        {% else %}
+        <div class="stat-card info">
+          <div class="stat-number">{{ pending_authority_approvals }}</div>
+          <div class="stat-label">Pending Authority Approvals</div>
+          <i class="fas fa-user-shield stat-icon"></i>
+        </div>
+        {% endif %}
+
+        <!-- Debug info for authorities (remove in production) -->
+        {% if current_user.designation in ['Squadron Commander', 'Director for
+        Operations', 'Commander'] %}
+        <small class="text-muted d-block mt-1">
+          Designation: {{ current_user.designation }}
+        </small>
+        {% endif %}
+      </div>
+      <!-- Third Card -->
+      <div class="col-md-3">
+        {% if current_user.authority == 'Administrator' %}
+        <!-- User Count for Admin -->
+        <div class="stat-card success">
+          <div class="stat-number">{{ user_count }}</div>
+          <div class="stat-label">System Users</div>
+          <i class="fas fa-users stat-icon"></i>
+        </div>
+        {% elif current_user.authority == 'Evaluator' %}
+        <!-- Pending Reviews for Evaluator -->
+        {% if pending_reviews > 0 %}
+        <a
+          href="{{ url_for('view_mrm_forms') }}?status=submitted&reviewed_by={{ current_user.id }}"
+          class="stat-card danger clickable-stat pulse-animation"
+          style="display: block"
+        >
+          <div class="stat-number">{{ pending_reviews }}</div>
+          <div class="stat-label">Pending Reviews</div>
+          <i class="fas fa-clock stat-icon"></i>
+          <div class="notification-badge">{{ pending_reviews }}</div>
+        </a>
+        {% else %}
+        <div class="stat-card danger">
+          <div class="stat-number">{{ pending_reviews }}</div>
+          <div class="stat-label">Pending Reviews</div>
+          <i class="fas fa-clock stat-icon"></i>
+        </div>
+        {% endif %} {% else %}
+        <!-- My Forms for Creator -->
+        <div class="stat-card success">
+          <div class="stat-number">{{ my_forms_count }}</div>
+          <div class="stat-label">Submited Forms</div>
+          <i class="fas fa-user-check stat-icon"></i>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Fourth Card -->
+      <div class="col-md-3">
+        {% if current_user.authority == 'Administrator' %}
+        <!-- Pending Reviews for Admin -->
+        <div class="stat-card info">
+          <div class="stat-number">{{ pending_reviews }}</div>
+          <div class="stat-label">Pending Reviews</div>
+          <i class="fas fa-clock stat-icon"></i>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <h4 class="mb-4">Quick Actions</h4>
+    <div class="row g-4">
+      {% if current_user.authority in ['Administrator', 'Evaluator', 'Creator']
+      %}
+      <div class="col-md-3">
+        <a href="{{ url_for('create_mrm') }}" class="action-card">
+          <i class="fas fa-plus-circle"></i>
+          <h5>Create MRM</h5>
+          <p class="text-muted">Create new Mission Risk Management form</p>
+        </a>
+      </div>
+      {% endif %} {% if current_user.authority in ['Administrator', 'Evaluator']
+      %}
+      <div class="col-md-3">
+        <a href="{{ url_for('add_hazard') }}" class="action-card">
+          <i class="fas fa-plus"></i>
+          <h5>Add Hazard</h5>
+          <p class="text-muted">Add new hazard to registry</p>
+        </a>
+      </div>
+      {% endif %}
+
+      <div class="col-md-3">
+        <a href="{{ url_for('view_mrm_forms') }}" class="action-card">
+          <i class="fas fa-list"></i>
+          <h5>View All Forms</h5>
+          <p class="text-muted">Browse all MRM forms</p>
+        </a>
+      </div>
+
+      <!-- Administrator Specific Actions -->
+      {% if current_user.authority == 'Administrator' %}
+      <div class="col-md-3">
+        <a href="{{ url_for('manage_users') }}" class="action-card">
+          <i class="fas fa-users-cog"></i>
+          <h5>Manage Users</h5>
+          <p class="text-muted">User administration</p>
+        </a>
+      </div>
+
+      <div class="col-md-3">
+        <a href="{{ url_for('manage_logos') }}" class="action-card">
+          <i class="fas fa-image"></i>
+          <h5>Unit Logos</h5>
+          <p class="text-muted">Manage unit logos</p>
+        </a>
+      </div>
+
+      <div class="col-md-3">
+        <a href="{{ url_for('reports') }}" class="action-card">
+          <i class="fas fa-chart-bar"></i>
+          <h5>Reports</h5>
+          <p class="text-muted">View system reports</p>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <br /><br /><br />
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Simple animation on page load
+    const cards = document.querySelectorAll(".stat-card, .action-card");
+    cards.forEach((card, index) => {
+      card.style.opacity = "0";
+      card.style.transform = "translateY(20px)";
+      setTimeout(() => {
+        card.style.transition = "all 0.5s ease";
+        card.style.opacity = "1";
+        card.style.transform = "translateY(0)";
+      }, index * 100);
+    });
+
+    // Add confirmation for important actions
+    const importantLinks = document.querySelectorAll(
+      'a[href*="delete"], a[href*="reset"]'
+    );
+    importantLinks.forEach((link) => {
+      link.addEventListener("click", function (e) {
+        if (!confirm("Are you sure you want to proceed?")) {
+          e.preventDefault();
+        }
+      });
+    });
+
+    // Update session time every minute
+    function updateSessionTime() {
+      const now = new Date();
+      const timeString = now.toLocaleString();
+      const timeElements = document.querySelectorAll(".session-time");
+      timeElements.forEach((el) => {
+        el.textContent = timeString;
+      });
+    }
+
+    setInterval(updateSessionTime, 60000);
+  });
+</script>
+{% endblock %}

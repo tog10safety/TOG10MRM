@@ -1,0 +1,85 @@
+<!-- templates/upload_signature.html -->
+
+{% extends "base.html" %} {% block title %}Upload Signature - MRM System{%
+endblock %} {% block content %}
+<div class="container-fluid">
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col">
+        <h1 class="h3 mb-0">
+          <i class="fas fa-signature me-2"></i>Upload Signature
+        </h1>
+        <p class="text-muted mb-0">
+          Upload your digital signature for MRM forms
+        </p>
+      </div>
+      <div class="col-auto">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">Signature Requirements</h5>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Signature Guidelines:</strong>
+        <ul class="mb-0 mt-2">
+          <li>Upload a clear image of your signature</li>
+          <li>Preferred format: PNG with transparent background</li>
+          <li>Recommended size: 300x100 pixels</li>
+          <li>File size should not exceed 2MB</li>
+        </ul>
+      </div>
+
+      {% if current_user.signature_filename %}
+      <div class="mb-4">
+        <h6>Current Signature:</h6>
+        <img
+          src="{{ url_for('get_signature', filename=current_user.signature_filename) }}"
+          alt="Current Signature"
+          class="img-thumbnail"
+          style="max-height: 100px"
+        />
+        <p class="text-muted small mt-2">
+          Upload a new signature to replace the current one.
+        </p>
+      </div>
+      {% endif %}
+
+      <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="mb-3">
+          <label for="signature" class="form-label"
+            >Select Signature Image</label
+          >
+          <input
+            type="file"
+            class="form-control"
+            id="signature"
+            name="signature"
+            accept=".png,.jpg,.jpeg"
+            required
+          />
+          <div class="form-text">
+            Accepted formats: PNG, JPG, JPEG (max 2MB)
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-upload me-2"></i>Upload Signature
+          </button>
+          <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

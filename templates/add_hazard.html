@@ -1,0 +1,211 @@
+<!-- templates/add_hazard.html -->
+{% extends "base.html" %} {% block title %}Add Hazard - Mission Risk
+Management{% endblock %} {% block content %}
+<div class="container-fluid">
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col">
+        <h1 class="h3 mb-0"><i class="fas fa-plus me-2"></i>Add New Hazard</h1>
+        <p class="text-muted mb-0">Add a new hazard to the registry</p>
+      </div>
+      <div class="col-auto">
+        <a href="{{ url_for('view_hazards') }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-2"></i>Back to Registry
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Hazard Information</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                  <i class="fas fa-info-circle me-2"></i>Basic Information
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label class="form-label">Unit *</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    value="{{ current_user.unit }}"
+                    readonly
+                  />
+                  <div class="form-text">Auto-filled from your profile</div>
+                </div>
+                <div class="mb-3">
+                  <label for="activity_code" class="form-label"
+                    >Activity Code *</label
+                  >
+                  <select
+                    class="form-select"
+                    id="activity_code"
+                    name="activity_code"
+                    required
+                  >
+                    <option value="">Select Activity Code</option>
+                    {% for code in activity_codes %}
+                    <option value="{{ code }}">{{ code }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="hazard_description" class="form-label"
+                    >Hazard Description *</label
+                  >
+                  <textarea
+                    class="form-control"
+                    id="hazard_description"
+                    name="hazard_description"
+                    rows="3"
+                    required
+                    placeholder="Describe the hazard..."
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                  <i class="fas fa-shield-alt me-2"></i>Mitigation Strategies *
+                </h6>
+              </div>
+              <div class="card-body">
+                <textarea
+                  class="form-control"
+                  id="mitigations"
+                  name="mitigations"
+                  rows="8"
+                  required
+                  placeholder="Enter each mitigation strategy on a new line. Example:&#10;&#10;• Implement safety protocols&#10;• Provide training&#10;• Install warning signs"
+                ></textarea>
+                <div class="form-text">
+                  Enter each strategy on a separate line
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                  <i class="fas fa-chart-line me-2"></i>Before Mitigation *
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label for="before_likelihood" class="form-label"
+                    >Likelihood (1-5) *</label
+                  >
+                  <select
+                    class="form-select"
+                    id="before_likelihood"
+                    name="before_likelihood"
+                    required
+                  >
+                    <option value="">Select Likelihood</option>
+                    <option value="5">5 - Frequent</option>
+                    <option value="4">4 - Occasional</option>
+                    <option value="3">3 - Remote</option>
+                    <option value="2">2 - Improbable</option>
+                    <option value="1">1 - Extremely Improbable</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="before_severity" class="form-label"
+                    >Severity (A-E) *</label
+                  >
+                  <select
+                    class="form-select"
+                    id="before_severity"
+                    name="before_severity"
+                    required
+                  >
+                    <option value="">Select Severity</option>
+                    <option value="A">A - Catastrophic</option>
+                    <option value="B">B - Hazardous</option>
+                    <option value="C">C - Major</option>
+                    <option value="D">D - Minor</option>
+                    <option value="E">E - Negligible</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card h-100">
+              <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                  <i class="fas fa-chart-line me-2"></i>After Mitigation *
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label for="after_likelihood" class="form-label"
+                    >Likelihood (1-5) *</label
+                  >
+                  <select
+                    class="form-select"
+                    id="after_likelihood"
+                    name="after_likelihood"
+                    required
+                  >
+                    <option value="">Select Likelihood</option>
+                    <option value="5">5 - Frequent</option>
+                    <option value="4">4 - Occasional</option>
+                    <option value="3">3 - Remote</option>
+                    <option value="2">2 - Improbable</option>
+                    <option value="1">1 - Extremely Improbable</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="after_severity" class="form-label"
+                    >Severity (A-E) *</label
+                  >
+                  <select
+                    class="form-select"
+                    id="after_severity"
+                    name="after_severity"
+                    required
+                  >
+                    <option value="">Select Severity</option>
+                    <option value="A">A - Catastrophic</option>
+                    <option value="B">B - Hazardous</option>
+                    <option value="C">C - Major</option>
+                    <option value="D">D - Minor</option>
+                    <option value="E">E - Negligible</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-save me-2"></i>Add Hazard
+          </button>
+          <a href="{{ url_for('view_hazards') }}" class="btn btn-secondary"
+            >Cancel</a
+          >
+        </div>
+      </form>
+    </div>
+  </div>
+  <br /><br />
+</div>
+{% endblock %}

@@ -1,0 +1,256 @@
+<!-- templates/edit_user.html -->
+{% extends "base.html" %} 
+{% block title %}Edit User - Mission Risk Management{% endblock %} 
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col">
+        <h1 class="h3 mb-0">
+          <i class="fas fa-user-edit me-2"></i>Edit User
+        </h1>
+        <p class="text-muted mb-0">Update user account information</p>
+      </div>
+      <div class="col-auto">
+        <a href="{{ url_for('manage_users') }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-2"></i>Back to Users
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit User Form -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="fas fa-user-edit me-2"></i>Edit User Information
+      </h5>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card mb-3">
+              <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                  <i class="fas fa-key me-2"></i>Account Information
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label for="username" class="form-label">Username *</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="username"
+                    name="username"
+                    value="{{ user.username }}"
+                    required
+                  />
+                </div>
+                <div class="mb-3">
+                  <label for="password" class="form-label">New Password (leave blank to keep current)</label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    name="password"
+                    placeholder="Enter new password to change"
+                  />
+                  <div class="form-text">Leave empty to keep current password</div>
+                </div>
+                <div class="mb-3">
+                  <label for="authority" class="form-label">Authority *</label>
+                  <select
+                    class="form-select"
+                    id="authority"
+                    name="authority"
+                    required
+                  >
+                    <option value="">Select Authority</option>
+                    <option value="Administrator" {% if user.authority == 'Administrator' %}selected{% endif %}>Administrator</option>
+                    <option value="Evaluator" {% if user.authority == 'Evaluator' %}selected{% endif %}>Evaluator</option>
+                    <option value="Creator" {% if user.authority == 'Creator' %}selected{% endif %}>Creator</option>
+                  </select>
+                </div>
+                <div class="mb-3 form-check">
+                  <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {% if user.is_active %}checked{% endif %}>
+                  <label class="form-check-label" for="is_active">Active Account</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="card mb-3">
+              <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                  <i class="fas fa-id-card me-2"></i>Personal Information
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label for="category" class="form-label">Category *</label>
+                  <select
+                    class="form-select"
+                    id="category"
+                    name="category"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Officer" {% if user.category == 'Officer' %}selected{% endif %}>Officer</option>
+                    <option value="Enlisted Personnel" {% if user.category == 'Enlisted Personnel' %}selected{% endif %}>
+                      Enlisted Personnel
+                    </option>
+                    <option value="Civilian Human Resource (CivHR)" {% if user.category == 'Civilian Human Resource (CivHR)' %}selected{% endif %}>
+                      Civilian Human Resource (CivHR)
+                    </option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="rank" class="form-label">Rank/Position</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="rank"
+                    name="rank"
+                    value="{{ user.rank or '' }}"
+                  />
+                </div>
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label for="first_name" class="form-label"
+                      >First Name *</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="first_name"
+                      name="first_name"
+                      value="{{ user.first_name }}"
+                      required
+                    />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="middle_name" class="form-label"
+                      >Middle Name</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="middle_name"
+                      name="middle_name"
+                      value="{{ user.middle_name or '' }}"
+                    />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="last_name" class="form-label"
+                      >Last Name *</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="last_name"
+                      name="last_name"
+                      value="{{ user.last_name }}"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+<!-- In edit_user.html - Fix the Military Information section -->
+<div class="card mb-3">
+  <div class="card-header bg-info text-white">
+    <h6 class="mb-0">
+      <i class="fas fa-id-badge me-2"></i>Military Information
+    </h6>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        <label for="serial_number" class="form-label"
+          >Serial Number (AFSN) *</label
+        >
+        <input
+          type="text"
+          class="form-control"
+          id="serial_number"
+          name="serial_number"
+          value="{{ user.serial_number }}"
+          required
+        />
+      </div>
+      <div class="col-md-4 mb-3">
+        <label for="branch_of_service" class="form-label"
+          >Branch of Service (BOS) *</label
+        >
+        <input
+          type="text"
+          class="form-control"
+          id="branch_of_service"
+          name="branch_of_service"
+          value="{{ user.branch_of_service }}"
+          required
+        />
+      </div>
+      <div class="col-md-4 mb-3">
+        <label for="unit" class="form-label">Unit *</label>
+        <input
+          type="text"
+          class="form-control"
+          id="unit"
+          name="unit"
+          value="{{ user.unit }}"
+          required
+        />
+      </div>
+    </div>
+    <!-- Move designation field outside the row but inside the card-body -->
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label for="designation" class="form-label">Designation</label>
+        <select class="form-select" id="designation" name="designation">
+          <option value="">Select Designation</option>
+          <option value="Commander" {% if user.designation == 'Commander' %}selected{% endif %}>Commander</option>
+          <option value="Director for Operations" {% if user.designation == 'Director for Operations' %}selected{% endif %}>Director for Operations</option>
+          <option value="Squadron Commander" {% if user.designation == 'Squadron Commander' %}selected{% endif %}>Squadron Commander</option>
+          <option value="Supervisor" {% if user.designation == 'Supervisor' %}selected{% endif %}>Supervisor</option>
+          <option value="Operator" {% if user.designation == 'Operator' %}selected{% endif %}>Operator</option>
+          <option value="Other" {% if user.designation == 'Other' %}selected{% endif %}>Other</option>
+        </select>
+      </div>
+      <div class="col-md-6 mb-3">
+        <label for="contact_number" class="form-label"
+          >Contact Number</label
+        >
+        <input
+          type="text"
+          class="form-control"
+          id="contact_number"
+          name="contact_number"
+          value="{{ user.contact_number or '' }}"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-save me-2"></i>Update User
+          </button>
+          <a href="{{ url_for('manage_users') }}" class="btn btn-secondary"
+            >Cancel</a
+          >
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,407 @@
+<!-- templates/add_user.html -->
+
+{% extends "base.html" %} {% block title %}Add User - Mission Risk Management{%
+endblock %} {% block content %}
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 mb-1">
+        <i class="fas fa-user-plus me-2 text-primary"></i>Add New User
+      </h1>
+      <p class="text-muted mb-0 small">Create a new system user account</p>
+    </div>
+    <div class="col-auto">
+      <a href="{{ url_for('manage_users') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Back to Users
+      </a>
+    </div>
+  </div>
+
+  <!-- Add User Form -->
+  <div class="card">
+    <div class="card-header bg-light py-2">
+      <h6 class="mb-0">
+        <i class="fas fa-user-edit me-2 text-primary"></i>User Information
+      </h6>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="row">
+          <div class="col-lg-6">
+            <!-- Account Information -->
+            <div class="card border-0 bg-light mb-3">
+              <div class="card-header bg-transparent py-2">
+                <h6 class="mb-0 text-primary">
+                  <i class="fas fa-key me-2"></i>Account Information
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label for="username" class="form-label small fw-semibold"
+                    >Username *</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="username"
+                    name="username"
+                    required
+                    placeholder="Enter unique username"
+                  />
+                </div>
+                <div class="mb-3">
+                  <label for="password" class="form-label small fw-semibold"
+                    >Password *</label
+                  >
+                  <input
+                    type="password"
+                    class="form-control form-control-sm"
+                    id="password"
+                    name="password"
+                    required
+                    placeholder="Enter secure password"
+                  />
+                  <div class="form-text extra-small">
+                    Password must contain: 8+ characters, uppercase, lowercase,
+                    number, and special character
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="authority" class="form-label small fw-semibold"
+                    >Authority Level *</label
+                  >
+                  <select
+                    class="form-select form-select-sm"
+                    id="authority"
+                    name="authority"
+                    required
+                  >
+                    <option value="">Select Authority Level</option>
+                    <option value="Administrator">Administrator</option>
+                    <option value="Evaluator">Evaluator</option>
+                    <option value="Creator">Creator</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Personal Information -->
+            <div class="card border-0 bg-light mb-3">
+              <div class="card-header bg-transparent py-2">
+                <h6 class="mb-0 text-primary">
+                  <i class="fas fa-id-card me-2"></i>Personal Information
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label for="category" class="form-label small fw-semibold"
+                    >Category *</label
+                  >
+                  <select
+                    class="form-select form-select-sm"
+                    id="category"
+                    name="category"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Officer">Officer</option>
+                    <option value="Enlisted Personnel">
+                      Enlisted Personnel
+                    </option>
+                    <option value="Civilian Human Resource (CivHR)">
+                      Civilian Human Resource (CivHR)
+                    </option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label for="rank" class="form-label small fw-semibold"
+                    >Rank/Position</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="rank"
+                    name="rank"
+                    placeholder="Enter rank or position"
+                  />
+                </div>
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label for="first_name" class="form-label small fw-semibold"
+                      >First Name *</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      id="first_name"
+                      name="first_name"
+                      required
+                      placeholder="First name"
+                    />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label
+                      for="middle_name"
+                      class="form-label small fw-semibold"
+                      >Middle Name</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      id="middle_name"
+                      name="middle_name"
+                      placeholder="Middle name"
+                    />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="last_name" class="form-label small fw-semibold"
+                      >Last Name *</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      id="last_name"
+                      name="last_name"
+                      required
+                      placeholder="Last name"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <!-- Military Information -->
+            <div class="card border-0 bg-light mb-3">
+              <div class="card-header bg-transparent py-2">
+                <h6 class="mb-0 text-primary">
+                  <i class="fas fa-id-badge me-2"></i>Military Information
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label
+                      for="serial_number"
+                      class="form-label small fw-semibold"
+                      >Serial Number (AFSN) *</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      id="serial_number"
+                      name="serial_number"
+                      required
+                      placeholder="Enter AFSN"
+                    />
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label
+                      for="branch_of_service"
+                      class="form-label small fw-semibold"
+                      >Branch of Service (BOS) *</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      id="branch_of_service"
+                      name="branch_of_service"
+                      required
+                      placeholder="Enter BOS"
+                    />
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="unit" class="form-label small fw-semibold"
+                    >Unit *</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="unit"
+                    name="unit"
+                    required
+                    placeholder="Enter unit designation"
+                  />
+                </div>
+                <div class="mb-3">
+                  <label for="designation" class="form-label small fw-semibold"
+                    >Designation</label
+                  >
+                  <select
+                    class="form-select form-select-sm"
+                    id="designation"
+                    name="designation"
+                  >
+                    <option value="">Select Designation</option>
+                    <option value="Commander">Commander</option>
+                    <option value="Director for Operations">
+                      Director for Operations
+                    </option>
+                    <option value="Squadron Commander">
+                      Squadron Commander
+                    </option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Operator">Operator</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label
+                    for="contact_number"
+                    class="form-label small fw-semibold"
+                    >Contact Number</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="contact_number"
+                    name="contact_number"
+                    placeholder="Enter contact number"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Authority Descriptions -->
+            <div class="card border-0 bg-light">
+              <div class="card-header bg-transparent py-2">
+                <h6 class="mb-0 text-primary">
+                  <i class="fas fa-info-circle me-2"></i>Authority Levels
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="small">
+                  <div class="mb-2">
+                    <span class="badge bg-danger badge-sm me-2">Admin</span>
+                    <strong>Administrator:</strong> Full system access, user
+                    management, system configuration
+                  </div>
+                  <div class="mb-2">
+                    <span class="badge bg-warning text-dark badge-sm me-2"
+                      >Evaluator</span
+                    >
+                    <strong>Evaluator:</strong> Hazard management, MRM review &
+                    approval, risk assessment
+                  </div>
+                  <div class="mb-0">
+                    <span class="badge bg-info badge-sm me-2">Creator</span>
+                    <strong>Creator:</strong> Create MRM forms, view own forms,
+                    submit for review
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Requirements -->
+            <div class="card border-0 bg-light mt-3">
+              <div class="card-body py-2">
+                <div class="small text-muted">
+                  <i class="fas fa-asterisk text-danger me-1 small"></i>
+                  <span class="fw-semibold">Required Fields</span>
+                  <br />
+                  All fields marked with * are required for user creation.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-save me-1"></i>Create User
+          </button>
+          <a
+            href="{{ url_for('manage_users') }}"
+            class="btn btn-secondary btn-sm"
+            >Cancel</a
+          >
+        </div>
+      </form>
+    </div>
+  </div>
+  <br /><br />
+</div>
+{% endblock %} {% block extra_css %}
+<style>
+  .card {
+    font-size: 0.85rem;
+  }
+
+  .form-control-sm,
+  .form-select-sm {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .btn-sm {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .badge-sm {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .extra-small {
+    font-size: 0.75rem;
+  }
+
+  .bg-light {
+    background-color: #f8f9fa !important;
+  }
+
+  /* Compact card styling */
+  .card-header {
+    padding: 0.5rem 1rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  /* Better spacing for form groups */
+  .mb-3 {
+    margin-bottom: 0.8rem !important;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .card-body {
+      padding: 0.75rem;
+    }
+
+    .form-control-sm,
+    .form-select-sm {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.5rem;
+    }
+
+    .btn-sm {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.7rem;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .d-flex.justify-content-between {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .col-auto {
+      width: 100%;
+    }
+
+    .btn {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}

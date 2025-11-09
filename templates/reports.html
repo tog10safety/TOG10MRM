@@ -1,0 +1,217 @@
+<!-- templates/reports.html -->
+{% extends "base.html" %} {% block title %}Reports - Mission Risk Management{%
+endblock %} {% block content %}
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col">
+        <h1 class="h3 mb-0">
+          <i class="fas fa-chart-bar me-2"></i>System Reports
+        </h1>
+        <p class="text-muted mb-0">Generate comprehensive system reports</p>
+      </div>
+      <div class="col-auto">
+        <a href="{{ url_for('manage_users') }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-2"></i>Back to Users
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Options -->
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-users me-2"></i>User Accounts Report
+          </h5>
+        </div>
+        <div class="card-body">
+          <p>
+            Generate a comprehensive report of all user accounts in the system
+            including authority levels and status.
+          </p>
+          <button
+            class="btn btn-primary w-100"
+            onclick="generateReport('users')"
+          >
+            <i class="fas fa-download me-2"></i>Generate User Report
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-exclamation-triangle me-2"></i>Hazards Report
+          </h5>
+        </div>
+        <div class="card-body">
+          <p>
+            Generate a detailed report of all hazards in the registry with risk
+            ratings and mitigation strategies.
+          </p>
+          <button
+            class="btn btn-success w-100"
+            onclick="generateReport('hazards')"
+          >
+            <i class="fas fa-download me-2"></i>Generate Hazards Report
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-clipboard-list me-2"></i>MRM Forms Report
+          </h5>
+        </div>
+        <div class="card-body">
+          <p>
+            Generate a complete report of all MRM forms with status, dates, and
+            assigned personnel.
+          </p>
+          <button
+            class="btn btn-info w-100"
+            onclick="generateReport('mrm_forms')"
+          >
+            <i class="fas fa-download me-2"></i>Generate MRM Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Results -->
+  <div id="reportResult" class="mt-4" style="display: none">
+    <div class="card">
+      <div
+        class="card-header d-flex justify-content-between align-items-center"
+      >
+        <h5 class="mb-0" id="reportTitle">Report</h5>
+        <div>
+          <button class="btn btn-sm btn-secondary me-2" onclick="exportToCSV()">
+            <i class="fas fa-file-csv me-1"></i>Export CSV
+          </button>
+          <button class="btn btn-sm btn-secondary" onclick="printReport()">
+            <i class="fas fa-print me-1"></i>Print Report
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped" id="reportTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  function generateReport(type) {
+    fetch(`/generate_report?type=${type}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          displayReport(data.report);
+        } else {
+          alert("Error generating report: " + data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Error generating report");
+      });
+  }
+
+  function displayReport(report) {
+    document.getElementById("reportTitle").textContent = report.title;
+
+    const table = document.getElementById("reportTable");
+    const thead = table.querySelector("thead");
+    const tbody = table.querySelector("tbody");
+
+    // Clear existing content
+    thead.innerHTML = "";
+    tbody.innerHTML = "";
+
+    // Create header row
+    const headerRow = document.createElement("tr");
+    report.headers.forEach((header) => {
+      const th = document.createElement("th");
+      th.textContent = header;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+
+    // Create data rows
+    report.rows.forEach((rowData) => {
+      const row = document.createElement("tr");
+      rowData.forEach((cellData) => {
+        const td = document.createElement("td");
+        td.textContent = cellData;
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+
+    // Show the report section
+    document.getElementById("reportResult").style.display = "block";
+
+    // Scroll to report
+    document
+      .getElementById("reportResult")
+      .scrollIntoView({ behavior: "smooth" });
+  }
+
+  function printReport() {
+    const printContent = document.getElementById("reportResult").innerHTML;
+    const originalContent = document.body.innerHTML;
+
+    document.body.innerHTML = printContent;
+    window.print();
+    document.body.innerHTML = originalContent;
+    window.location.reload();
+  }
+
+  function exportToCSV() {
+    const table = document.getElementById("reportTable");
+    let csv = [];
+
+    // Get headers
+    const headers = [];
+    table.querySelectorAll("thead th").forEach((th) => {
+      headers.push(th.textContent);
+    });
+    csv.push(headers.join(","));
+
+    // Get rows
+    table.querySelectorAll("tbody tr").forEach((tr) => {
+      const row = [];
+      tr.querySelectorAll("td").forEach((td) => {
+        row.push(`"${td.textContent.replace(/"/g, '""')}"`);
+      });
+      csv.push(row.join(","));
+    });
+
+    // Download CSV
+    const csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+</script>
+{% endblock %}

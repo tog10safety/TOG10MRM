@@ -1,0 +1,283 @@
+<!-- templates/manage_logos.html -->
+
+{% extends "base.html" %} {% block title %}Manage Unit Logos - MRM System{%
+endblock %} {% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h4 mb-1">
+        <i class="fas fa-image me-2 text-primary"></i>Unit Logos
+      </h1>
+      <p class="text-muted mb-0 small">Upload and manage unit logos</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Upload Logo Form -->
+    <div class="col-lg-5 mb-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light py-2">
+          <h6 class="mb-0">
+            <i class="fas fa-upload me-1 text-primary"></i>Upload Logo
+          </h6>
+        </div>
+        <div class="card-body p-3">
+          <form
+            method="POST"
+            action="{{ url_for('upload_logo') }}"
+            enctype="multipart/form-data"
+            class="small"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="mb-2">
+              <label for="unit_name" class="form-label small fw-semibold"
+                >Unit</label
+              >
+              <select
+                class="form-select form-select-sm"
+                id="unit_name"
+                name="unit_name"
+                required
+              >
+                <option value="">Select unit...</option>
+                {% for unit in units %}
+                <option value="{{ unit }}">{{ unit }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="logo" class="form-label small fw-semibold"
+                >Logo Image</label
+              >
+              <input
+                type="file"
+                class="form-control form-control-sm"
+                id="logo"
+                name="logo"
+                accept=".png,.jpg,.jpeg,.gif"
+                required
+              />
+              <div class="form-text small">PNG, JPG, JPEG, GIF • Max 16MB</div>
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="fas fa-upload me-1"></i>Upload Logo
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Logos -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div
+          class="card-header bg-light py-2 d-flex justify-content-between align-items-center"
+        >
+          <h6 class="mb-0">
+            <i class="fas fa-images me-1 text-primary"></i>Current Logos
+          </h6>
+          <span class="badge bg-primary bg-opacity-20">{{ logos|length }}</span>
+        </div>
+        <div class="card-body p-2">
+          {% if logos %}
+          <div class="row g-2">
+            {% for logo in logos %}
+            <div class="col-6 col-sm-4 col-md-3">
+              <div
+                class="border rounded p-2 text-center position-relative bg-light"
+              >
+                <!-- Delete Button -->
+                <div class="position-absolute top-0 end-0 mt-1 me-1">
+                  <form
+                    method="POST"
+                    action="{{ url_for('delete_logo', logo_id=logo.id) }}"
+                    class="d-inline"
+                  >
+                    <input
+                      type="hidden"
+                      name="csrf_token"
+                      value="{{ csrf_token() }}"
+                    />
+                    <button
+                      type="submit"
+                      class="btn btn-danger btn-xs p-1"
+                      onclick="return confirm('Delete {{ logo.unit_name }} logo?')"
+                      title="Delete Logo"
+                    >
+                      <i class="fas fa-times fa-xs"></i>
+                    </button>
+                  </form>
+                </div>
+
+                <!-- Logo Image -->
+                <div class="mb-1">
+                  <img
+                    src="{{ url_for('get_unit_logo', filename=logo.logo_filename) }}"
+                    alt="{{ logo.unit_name }}"
+                    class="img-fluid rounded"
+                    style="
+                      max-height: 50px;
+                      max-width: 100%;
+                      object-fit: contain;
+                    "
+                    onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iOCIgZmlsbD0iI0Y4RjlGQSIvPgo8cGF0aCBkPSJNMzAgMTVDMzMuMzEzNyAxNSAzNiAxNy42ODYzIDM2IDIxQzM2IDI0LjMxMzcgMzMuMzEzNyAyNyAzMCAyN0MyNi42ODYzIDI3IDI0IDI0LjMxMzcgMjQgMjFDMjQgMTcuNjg2MyAyNi42ODYzIDE1IDMwIDE1WiIgZmlsbD0iIzlDQ0VGRiIvPgo8cGF0aCBkPSJNMTggNDVINDJDNDQuMjA5MSA0NSA0NiA0My4yMDkxIDQ2IDQxVjM3QzQ2IDMxLjQ3NzIgNDEuNTIyOCAyNyAzNiAyN0gyNEMxOC40NzcyIDI3IDE0IDMxLjQ3NzIgMTQgMzdWNDFDMTQgNDMuMjA5MSAxNS43OTA5IDQ1IDE4IDQ1WiIgZmlsbD0iIzlDQ0VGRiIvPgo8L3N2Zz4K';"
+                  />
+                </div>
+
+                <!-- Unit Name -->
+                <div
+                  class="small fw-semibold text-truncate"
+                  title="{{ logo.unit_name }}"
+                >
+                  {{ logo.unit_name }}
+                </div>
+
+                <!-- Upload Info -->
+                <div class="text-muted extra-small">
+                  {{ logo.date_uploaded.strftime('%m/%d/%y') }} {% if
+                  logo.uploader_user %}
+                  <br />
+                  <span
+                    class="text-truncate d-block"
+                    title="By: {{ logo.uploader_user.get_full_name() }}"
+                  >
+                    {{ logo.uploader_user.get_full_name()|truncate(12) }}
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-4">
+            <div class="mb-2">
+              <div
+                style="
+                  width: 60px;
+                  height: 60px;
+                  background: #f8f9fa;
+                  border-radius: 8px;
+                  display: inline-flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <i class="fas fa-image text-muted opacity-50"></i>
+              </div>
+            </div>
+            <p class="text-muted small mb-0">No logos uploaded</p>
+            <p class="text-muted extra-small">
+              Upload your first logo using the form
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_css %}
+<style>
+  .card {
+    font-size: 0.85rem;
+  }
+
+  .form-control-sm,
+  .form-select-sm {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .btn-sm {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.75rem;
+  }
+
+  .btn-xs {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    line-height: 1;
+  }
+
+  .extra-small {
+    font-size: 0.7rem;
+  }
+
+  .position-relative {
+    transition: all 0.2s ease;
+    min-height: 90px;
+  }
+
+  .position-relative:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-danger {
+    opacity: 0.8;
+    transition: all 0.2s ease;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-danger:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  .bg-light {
+    background-color: #f8f9fa !important;
+  }
+
+  /* Compact header styling */
+  .card-header {
+    padding: 0.5rem 1rem;
+  }
+
+  .card-header h6 {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  /* Better spacing for mobile */
+  @media (max-width: 768px) {
+    .col-6 {
+      padding: 0.25rem;
+    }
+
+    .position-relative {
+      min-height: 80px;
+    }
+
+    img {
+      max-height: 40px !important;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .col-6 {
+      width: 50%;
+    }
+
+    .position-absolute {
+      position: static !important;
+      text-align: center;
+      margin-top: 0.25rem;
+    }
+
+    .btn-xs {
+      width: auto;
+      padding: 0.2rem 0.5rem;
+    }
+  }
+</style>
+{% endblock %}

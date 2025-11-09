@@ -1,0 +1,464 @@
+<!-- templates/view_mrm.html -->
+
+{% extends "base.html" %} {% block title %}View MRM Form - Mission Risk
+Management{% endblock %} {% block content %}
+<div class="container-fluid">
+  <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col">
+        <h1 class="h3 mb-0">Mission Risk Management (MRM) Form</h1>
+        <p class="text-muted mb-0">Generated MRM form with risk assessment</p>
+      </div>
+      <div class="col-auto">
+        <!-- PDF Export Button -->
+        <a
+          href="{{ url_for('mrm_pdf', form_id=form.id) }}"
+          target="_blank"
+          class="btn btn-danger"
+        >
+          <i class="fas fa-file-pdf me-2"></i> Preview PDF
+        </a>
+        <a href="{{ url_for('view_mrm_forms') }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left me-2"></i> Back to Forms
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mission Info -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">Mission Information</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <p><strong>MRM Number:</strong> {{ form.mrm_number }}</p>
+          <p><strong>Mission/Activity:</strong> {{ form.activity_mission }}</p>
+          <p>
+            <strong>Created By:</strong> {{ creator.get_full_name() if creator
+            else 'Unknown User' }}
+          </p>
+          <p>
+            <strong>Unit:</strong> {{ creator.unit if creator else 'Unknown' }}
+          </p>
+        </div>
+        <div class="col-md-6">
+          <p>
+            <strong>Date Created:</strong> {{
+            form.date_created.strftime('%Y-%m-%d %H:%M') }}
+          </p>
+          <p>
+            <strong>Status:</strong>
+            <span
+              class="badge {% if form.status == 'draft' %}bg-secondary {% elif form.status == 'submitted' %}bg-warning {% else %}bg-success{% endif %}"
+            >
+              {{ form.status|title }}
+            </span>
+          </p>
+          {% if form.review_status %}
+          <p>
+            <strong>Review Status:</strong>
+            <span
+              class="badge {% if form.review_status == 'approved' %}bg-success {% elif form.review_status == 'rejected' %}bg-danger {% else %}bg-warning{% endif %}"
+            >
+              {{ form.review_status|title }}
+            </span>
+          </p>
+          {% endif %} {% if form.authority_level %}
+          <p>
+            <strong>Required Authority:</strong>
+            <span class="badge bg-info">{{ form.authority_level }}</span>
+          </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <div class="col-12">
+          <p><strong>Safety Objectives:</strong></p>
+          <div class="alert alert-light border">
+            {{ form.safety_objectives }}
+          </div>
+        </div>
+      </div>
+
+      {% if form.aircraft_vehicle %}
+      <div class="row">
+        <div class="col-12">
+          <p><strong>Aircraft/Vehicle:</strong> {{ form.aircraft_vehicle }}</p>
+        </div>
+      </div>
+      {% endif %} {% if form.environment %}
+      <div class="row">
+        <div class="col-12">
+          <p><strong>Environment:</strong> {{ form.environment }}</p>
+        </div>
+      </div>
+      {% endif %} {% if form.mission_statement %}
+      <div class="row">
+        <div class="col-12">
+          <p>
+            <strong>Mission Statement:</strong> {{ form.mission_statement }}
+          </p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- I'M SAFE Checklist -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">I'M SAFE Checklist</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        {% for key, description in imsafe_checklist.items() %}
+        <div class="col-md-6 mb-2">
+          <div class="form-check">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              {%
+              if
+              imsafe_values.get(key,
+              false)
+              %}checked{%
+              endif
+              %}
+              disabled
+            />
+            <label class="form-check-label">
+              <strong>{{ key }}</strong> - {{ description.split(' - ')[1] }}
+            </label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Hazards Table -->
+  <div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0">Hazards Overview</h5>
+    </div>
+    <div class="card-body">
+      {% if mission_hazards %}
+      <div class="table-responsive">
+        <table class="table table-hover table-striped">
+          <thead class="table-light">
+            <tr>
+              <th>Activity Code</th>
+              <th>Risk Identified</th>
+              <th>Before Mitigation</th>
+              <th>Mitigation</th>
+              <th>After Mitigation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mh in mission_hazards %}
+            <tr>
+              <td><strong>{{ mh.hazard.activity_code }}</strong></td>
+              <td>{{ mh.hazard.hazard_description }}</td>
+              <td>
+                <span
+                  class="badge bg-{{ mh.hazard.get_risk_color(mh.hazard.before_risk_rating) }}"
+                >
+                  {{ mh.hazard.before_risk_rating }}
+                </span>
+              </td>
+              <td>{{ mh.mitigation_override or mh.hazard.mitigations }}</td>
+              <td>
+                <span
+                  class="badge bg-{{ mh.hazard.get_risk_color(mh.hazard.after_risk_rating) }}"
+                >
+                  {{ mh.hazard.after_risk_rating }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-4">
+        <i class="fas fa-exclamation-triangle fa-2x text-muted mb-3"></i>
+        <p class="text-muted">No hazards selected for this mission.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Risk Summary -->
+  {% if form.total_percent is not none %}
+  <div class="card mb-4">
+    <div class="card-header bg-info text-white">
+      <h5 class="mb-0">Risk Summary</h5>
+    </div>
+    <div class="card-body">
+      <div class="row text-center">
+        <div class="col-md-4">
+          <div class="mb-3">
+            <h3 class="text-primary">
+              {{ "%.1f"|format(form.total_percent) }}%
+            </h3>
+            <p class="mb-0"><strong>Total Risk Percentage</strong></p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="mb-3">
+            <h3 class="text-warning">
+              {{ form.residual_risk or 0 }}/{{ form.max_risk or 0 }}
+            </h3>
+            <p class="mb-0"><strong>Residual Risk / Max Risk</strong></p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="mb-3">
+            <h3>
+              <span
+                class="badge {% if form.authority_level == 'Operator' %}bg-success {% elif form.authority_level == 'Supervisor' %}bg-info {% elif form.authority_level == 'Squadron Commander' %}bg-warning {% elif form.authority_level == 'Director for Operations' %}bg-orange {% else %}bg-danger{% endif %}"
+              >
+                {{ form.authority_level }}
+              </span>
+            </h3>
+            <p class="mb-0"><strong>Required Authority</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Approval Signatures -->
+  <div class="card">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">Approval Signatures</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <!-- Creator Signature -->
+        <div class="col-md-4">
+          <h6>Creator</h6>
+          {% if form.creator_signed and creator and creator.signature_filename
+          %}
+          <div class="text-center mb-3">
+            <img
+              src="{{ url_for('get_signature', filename=creator.signature_filename) }}"
+              alt="Creator Signature"
+              class="signature-img border rounded"
+              style="max-width: 200px; max-height: 80px"
+            />
+          </div>
+          <p class="text-center mb-1">
+            <strong>{{ creator.get_full_name() }}</strong>
+          </p>
+          <p class="text-center text-muted small">
+            {{ form.creator_signature_date.strftime('%Y-%m-%d %H:%M') if
+            form.creator_signature_date else 'Not signed' }}
+          </p>
+          {% else %}
+          <div class="text-center py-3">
+            <i class="fas fa-signature fa-2x text-muted mb-2"></i>
+            <p class="text-muted small mb-0">Pending signature</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Evaluator Signature -->
+        <div class="col-md-4">
+          <h6>Evaluator</h6>
+          {% if form.evaluator_signed and evaluator and
+          evaluator.signature_filename %}
+          <div class="text-center mb-3">
+            <img
+              src="{{ url_for('get_signature', filename=evaluator.signature_filename) }}"
+              alt="Evaluator Signature"
+              class="signature-img border rounded"
+              style="max-width: 200px; max-height: 80px"
+            />
+          </div>
+          <p class="text-center mb-1">
+            <strong
+              >{{ evaluator.get_full_name() if evaluator else 'Not assigned'
+              }}</strong
+            >
+          </p>
+          <p class="text-center text-muted small">
+            {{ form.evaluator_signature_date.strftime('%Y-%m-%d %H:%M') if
+            form.evaluator_signature_date else 'Not signed' }}
+          </p>
+          {% else %}
+          <div class="text-center py-3">
+            <i class="fas fa-signature fa-2x text-muted mb-2"></i>
+            <p class="text-muted small mb-0">
+              {% if evaluator %} Pending signature {% else %} Not assigned {%
+              endif %}
+            </p>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Authority Signature -->
+        <div class="col-md-4">
+          <h6>
+            {% if form.authority_level %} {{ form.authority_level }} {% else %}
+            Mission Authority {% endif %}
+          </h6>
+          {% if form.authority_approved and authority_user and
+          authority_user.signature_filename %}
+          <div class="text-center mb-3">
+            <img
+              src="{{ url_for('get_signature', filename=authority_user.signature_filename) }}"
+              alt="Authority Signature"
+              class="signature-img border rounded"
+              style="max-width: 200px; max-height: 80px"
+            />
+          </div>
+          <p class="text-center mb-1">
+            <strong
+              >{{ authority_user.get_full_name() if authority_user else 'Not
+              assigned' }}</strong
+            >
+          </p>
+          <p class="text-center text-muted small">
+            {{ form.authority_approval_date.strftime('%Y-%m-%d %H:%M') if
+            form.authority_approval_date else 'Not signed' }}
+          </p>
+          {% elif form.authority_assigned_to and authority_user %}
+          <div class="text-center py-3">
+            <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+            <p class="text-warning small mb-1">Awaiting approval</p>
+            <p class="text-muted small mb-0">
+              {{ authority_user.get_full_name() }}
+            </p>
+          </div>
+          {% else %}
+          <div class="text-center py-3">
+            <i class="fas fa-user-shield fa-2x text-muted mb-2"></i>
+            <p class="text-muted small mb-0">
+              {% if form.authority_level %} Awaiting {{ form.authority_level }}
+              assignment {% else %} No authority required {% endif %}
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Authority Approval Button -->
+      {% if current_user.id == form.authority_assigned_to and not
+      form.authority_approved and form.review_status == 'approved' %}
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="text-center border-top pt-3">
+            <form
+              method="POST"
+              action="{{ url_for('authority_approve_mrm', form_id=form.id) }}"
+            >
+              <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+              />
+              <button
+                type="submit"
+                class="btn btn-success btn-lg"
+                onclick="return confirm('Approve MRM {{ form.mrm_number }} as {{ form.authority_level }}?')"
+              >
+                <i class="fas fa-check me-2"></i>Approve as {{
+                form.authority_level }}
+              </button>
+              <p class="text-muted small mt-2">
+                You are assigned as the {{ form.authority_level }} for this MRM
+              </p>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Review Notes -->
+  {% if form.review_notes %}
+  <div class="card mt-4">
+    <div class="card-header bg-light">
+      <h5 class="mb-0"><i class="fas fa-comment me-2"></i>Review Notes</h5>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-info">{{ form.review_notes }}</div>
+      {% if form.date_reviewed %}
+      <small class="text-muted">
+        Reviewed on: {{ form.date_reviewed.strftime('%Y-%m-%d %H:%M') }} {% if
+        evaluator %} by {{ evaluator.get_full_name() }} {% endif %}
+      </small>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+<!-- Authority Approval Section -->
+{% if current_user.id == form.authority_assigned_to and not
+form.authority_approved and form.review_status == 'approved' %}
+<div class="card mt-4">
+  <div class="card-header bg-warning text-dark">
+    <h5 class="mb-0">
+      <i class="fas fa-user-shield me-2"></i>Authority Approval Required
+    </h5>
+  </div>
+  <div class="card-body text-center">
+    <div class="alert alert-warning">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <strong>Action Required:</strong> You need to approve this MRM as the {{
+      form.authority_level }}
+    </div>
+
+    <form
+      method="POST"
+      action="{{ url_for('authority_approve_mrm', form_id=form.id) }}"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      {% if current_user.signature_filename %}
+      <button type="submit" class="btn btn-success btn-lg me-3">
+        <i class="fas fa-check me-2"></i>Approve as {{ form.authority_level }}
+      </button>
+      {% else %}
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        You need to
+        <a href="{{ url_for('upload_signature') }}">upload your signature</a>
+        before approving MRM forms.
+      </div>
+      {% endif %}
+
+      <a
+        href="{{ url_for('mrm_pdf', form_id=form.id) }}"
+        target="_blank"
+        class="btn btn-info"
+      >
+        <i class="fas fa-file-pdf me-2"></i>Review PDF
+      </a>
+    </form>
+
+    <p class="text-muted mt-3 small">
+      By approving, you confirm that all risks have been properly assessed and
+      mitigated.
+    </p>
+  </div>
+</div>
+{% endif %}
+<style>
+  .bg-orange {
+    background-color: #fd7e14 !important;
+  }
+  .signature-img {
+    max-width: 200px;
+    max-height: 80px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+  }
+</style>
+{% endblock %}

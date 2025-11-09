@@ -23,7 +23,6 @@ from werkzeug.utils import secure_filename
 # Replace the existing database configuration with this:
 app = Flask(__name__)
 
-# Configuration - Use environment variables for production
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
 # Database Configuration - Use Render's database URL
@@ -39,15 +38,15 @@ else:
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# PostgreSQL-specific engine options
+# PostgreSQL-specific engine options - REMOVE application_name for compatibility
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 300,
     'pool_pre_ping': True,
     'pool_size': 10,
     'max_overflow': 20,
     'connect_args': {
-        'connect_timeout': 10,
-        'application_name': 'mrm_system'
+        'connect_timeout': 10
+        # Remove 'application_name' parameter as it's not supported
     }
 }
 # Security configurations

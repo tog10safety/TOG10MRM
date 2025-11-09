@@ -10,7 +10,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
-import os
 import json
 import re
 import html
@@ -20,35 +19,28 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 
-# Replace the existing database configuration with this:
+import os
+
 app = Flask(__name__)
 
+# Configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
-# Database Configuration - Use Render's database URL
+# FORCE PostgreSQL on Render - Remove all MySQL references
 database_url = os.environ.get('DATABASE_URL')
+
 if database_url:
     # Replace postgres:// with postgresql:// for SQLAlchemy
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    print(f"Using PostgreSQL: {database_url.split('@')[1] if '@' in database_url else 'Database configured'}")
 else:
-    # Fallback to MySQL for local development
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://mrm_user:Daris_032218@localhost/mrm_system'
+    # On Render, we MUST have DATABASE_URL
+    raise ValueError("DATABASE_URL environment variable is required")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# PostgreSQL-specific engine options - REMOVE application_name for compatibility
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_recycle': 300,
-    'pool_pre_ping': True,
-    'pool_size': 10,
-    'max_overflow': 20,
-    'connect_args': {
-        'connect_timeout': 10
-        # Remove 'application_name' parameter as it's not supported
-    }
-}
 # Security configurations
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,

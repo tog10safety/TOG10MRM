@@ -2318,25 +2318,21 @@ def mrm_pdf(form_id):
     ]))
     elements.append(header1_table)
 
-    # === IMPROVED SIGNATURE HELPER ===
-   def get_signature_image(user, signed, signature_date, width=80, height=25):
-    """Get signature image or placeholder - NO TEXT LABELS"""
-    try:
-        if user and signed and user.signature_filename:
-            sig_path = os.path.join(app.config.get('SIGNATURE_FOLDER', ''), user.signature_filename)
-            if os.path.exists(sig_path):
-                return Image(sig_path, width=width, height=height)
-        
-        # RETURN SIMPLE LINE PLACEHOLDER - NO TEXT
-        return Paragraph("____________", small)
+    # === CLEAN SIGNATURE HELPER - NO ANNOYING TEXT ===
+    def get_signature_image(user, signed, signature_date, width=80, height=25):
+        """Get signature image or simple underline - NO LABELS"""
+        try:
+            if user and signed and user.signature_filename:
+                sig_path = os.path.join(app.config.get('SIGNATURE_FOLDER', ''), user.signature_filename)
+                if os.path.exists(sig_path):
+                    return Image(sig_path, width=width, height=height)
             
-    except Exception as e:
-        print(f"Signature error for user {user.id if user else 'None'}: {e}")
-        return Paragraph("____________", small)  # Simple line on error too
+            # Simple underline placeholder - clean and professional
+            return Paragraph("__________________", small)
                 
         except Exception as e:
             print(f"Signature error for user {user.id if user else 'None'}: {e}")
-            return Paragraph("ERROR", small)
+            return Paragraph("__________________", small)
 
     # === HEADER PART 2: Signatories with REAL-TIME DATA ===
     # Adjust signature sizes for mobile
@@ -2501,7 +2497,7 @@ def mrm_pdf(form_id):
     ]))
     elements.append(summary_table)
 
-    # === IMPROVED AUTHORITY TABLE WITH REAL-TIME DATA ===
+    # === CLEAN AUTHORITY TABLE - NO ANNOYING TEXT ===
     authority_sig = get_signature_image(
         authority_user, form.authority_approved, form.authority_approval_date, 
         width=sig_width, height=sig_height
@@ -2509,13 +2505,13 @@ def mrm_pdf(form_id):
 
     centered_small = ParagraphStyle("centered_small", parent=styles["Normal"], fontSize=font_size, leading=font_size+2, alignment=1)
 
-    # Dynamic authority information based on REAL-TIME status
-    if authority_user and form.authority_approved:
-        authority_name_date = f"{authority_user.get_full_name()}<br/>APPROVED<br/>{form.authority_approval_date.strftime('%d %b %Y %H:%M') if form.authority_approval_date else ''}"
-    elif authority_user:
-        authority_name_date = f"{authority_user.get_full_name()}<br/>PENDING APPROVAL"
-    else:
-        authority_name_date = "NOT ASSIGNED<br/>PENDING APPROVAL"
+    # CLEAN authority information - NO STATUS TEXT
+    authority_name_date = ""
+    if authority_user:
+        authority_name_date = authority_user.get_full_name()
+        if form.authority_approved and form.authority_approval_date:
+            authority_name_date += f"<br/>{form.authority_approval_date.strftime('%d %b %Y %H:%M')}"
+    # If no authority_user, authority_name_date remains empty
 
     authority_data = [
         ["Residual Risk /Max Risk (%)", "Mission Decision Authority", "Name with Date/Time", "Signature"],

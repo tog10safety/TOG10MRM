@@ -2319,21 +2319,20 @@ def mrm_pdf(form_id):
     elements.append(header1_table)
 
     # === IMPROVED SIGNATURE HELPER ===
-    def get_signature_image(user, signed, signature_date, width=80, height=25):
-        """Get signature image or placeholder with better error handling"""
-        try:
-            if user and signed and user.signature_filename:
-                sig_path = os.path.join(app.config.get('SIGNATURE_FOLDER', ''), user.signature_filename)
-                if os.path.exists(sig_path):
-                    return Image(sig_path, width=width, height=height)
+   def get_signature_image(user, signed, signature_date, width=80, height=25):
+    """Get signature image or placeholder - NO TEXT LABELS"""
+    try:
+        if user and signed and user.signature_filename:
+            sig_path = os.path.join(app.config.get('SIGNATURE_FOLDER', ''), user.signature_filename)
+            if os.path.exists(sig_path):
+                return Image(sig_path, width=width, height=height)
+        
+        # RETURN SIMPLE LINE PLACEHOLDER - NO TEXT
+        return Paragraph("____________", small)
             
-            # Return appropriate placeholder based on status
-            if user and signed:
-                return Paragraph("✓ SIGNED", small)  # Signed but no image
-            elif user:
-                return Paragraph("PENDING", small)  # Not signed yet
-            else:
-                return Paragraph("__________________", small)  # No user assigned
+    except Exception as e:
+        print(f"Signature error for user {user.id if user else 'None'}: {e}")
+        return Paragraph("____________", small)  # Simple line on error too
                 
         except Exception as e:
             print(f"Signature error for user {user.id if user else 'None'}: {e}")

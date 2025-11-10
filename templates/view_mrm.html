@@ -12,7 +12,7 @@ Management{% endblock %} {% block content %}
       <div class="col-auto">
         <!-- PDF Export Button -->
         <a
-          href="{{ url_for('mrm_pdf', form_id=form.id) }}"
+          href="{{ url_for('mrm_pdf', form_id=form.id) }}?t={{ current_time }}"
           target="_blank"
           class="btn btn-danger"
         >

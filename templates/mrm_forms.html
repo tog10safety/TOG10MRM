@@ -357,7 +357,7 @@
                                 </a>
 
                                 <!-- PDF Button -->
-                                <a href="{{ url_for('mrm_pdf', form_id=form.id) }}" target="_blank" class="btn btn-outline-danger btn-sm mb-1" title="PDF">
+                                <a href="{{ url_for('mrm_pdf', form_id=form.id) }}?t={{ current_time }}" target="_blank" class="btn btn-outline-danger btn-sm mb-1" title="PDF">
                                     <i class="fas fa-file-pdf"></i>
                                 </a>
 

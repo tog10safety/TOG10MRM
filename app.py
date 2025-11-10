@@ -2217,6 +2217,50 @@ def delete_user(user_id):
 @app.route('/mrm/<int:form_id>/pdf')
 @login_required
 def mrm_pdf(form_id):
+    # === CACHE BUSTING AND DATA FRESHNESS ===
+    from datetime import datetime
+    import time
+    
+    # Force refresh database session to get latest data
+    db.session.expire_all()
+    
+    # Check for force refresh parameter
+    force_refresh = request.args.get('refresh', 'false').lower() == 'true'
+    if force_refresh:
+        db.session.expire_all()
+    
+    # Generate cache buster
+    cache_buster = int(time.time())
+    
+    # === GET FRESH DATA ===
+    form = MRMForm.query.get_or_404(form_id)
+    creator = User.query.get(form.created_by)
+    reviewer = User.query.get(form.reviewed_by) if form.reviewed_by else None
+    authority_user = User.query.get(form.authority_assigned_to) if form.authority_assigned_to else None
+    hazards = MissionHazards.query.filter_by(mrm_id=form.id, selected=True).all()
+    
+    # Debug logging for signatories
+    print(f"PDF DEBUG - Form {form_id}:")
+    print(f"  Creator: {creator.get_full_name() if creator else 'None'}")
+    print(f"  Creator signed: {form.creator_signed}")
+    print(f"  Reviewer: {reviewer.get_full_name() if reviewer else 'None'}")
+    print(f"  Reviewer signed: {form.evaluator_signed}")
+    print(f"  Authority: {authority_user.get_full_name() if authority_user else 'None'}")
+    print(f"  Authority approved: {form.authority_approved}")
+    
+    # === MOBILE DETECTION AND LAYOUT OPTIMIZATION ===
+    user_agent = request.headers.get('User-Agent', '').lower()
+    is_mobile = any(device in user_agent for device in ['mobile', 'android', 'iphone', 'ipad'])
+    
+    # Adjust layout for mobile
+    if is_mobile:
+        margins = 10  # Smaller margins for mobile
+        font_size = 8  # Smaller font for mobile
+    else:
+        margins = 20  # Standard margins
+        font_size = 9  # Standard font size
+
+    # === PDF SETUP ===
     from io import BytesIO
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Image, Spacer
@@ -2224,28 +2268,29 @@ def mrm_pdf(form_id):
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     import os
 
-    form = MRMForm.query.get_or_404(form_id)
-    creator = User.query.get(form.created_by)
-    reviewer = User.query.get(form.reviewed_by) if form.reviewed_by else None
-    authority_user = User.query.get(
-        form.authority_assigned_to) if form.authority_assigned_to else None
-    hazards = MissionHazards.query.filter_by(
-        mrm_id=form.id, selected=True).all()
-
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(A4),
-        leftMargin=20, rightMargin=20, topMargin=18, bottomMargin=18
+        leftMargin=margins, 
+        rightMargin=margins, 
+        topMargin=margins, 
+        bottomMargin=margins
     )
     elements = []
     styles = getSampleStyleSheet()
+    
+    # Dynamic font sizes based on device
     small = ParagraphStyle(
-        "small", parent=styles["Normal"], fontSize=9, leading=11)
+        "small", parent=styles["Normal"], fontSize=font_size, leading=font_size+2)
     header_title_style = ParagraphStyle(
         "headertitle", parent=styles["Title"], alignment=1, fontSize=14, leading=16)
 
-    hazard_colWidths = [25, 140, 60, 60, 60, 200, 60, 60, 60]  # total = 725
+    # Dynamic column widths for mobile
+    if is_mobile:
+        hazard_colWidths = [20, 120, 50, 50, 50, 180, 50, 50, 50]  # Smaller for mobile
+    else:
+        hazard_colWidths = [25, 140, 60, 60, 60, 200, 60, 60, 60]  # Standard
 
     # === HEADER PART 1: Logo + Title ===
     logo_path = os.path.join(app.static_folder, "logo.png")
@@ -2260,7 +2305,12 @@ def mrm_pdf(form_id):
             header_title_style
         )
     ]]
-    header1_table = Table(header1_data, colWidths=[60, 665])  # total 725
+    
+    if is_mobile:
+        header1_table = Table(header1_data, colWidths=[50, 665])  # Smaller logo for mobile
+    else:
+        header1_table = Table(header1_data, colWidths=[60, 665])
+        
     header1_table.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.4, colors.black),
         ('ALIGN', (1, 0), (1, 0), 'CENTER'),
@@ -2268,42 +2318,57 @@ def mrm_pdf(form_id):
     ]))
     elements.append(header1_table)
 
-    # --- Signature helper ---
+    # === IMPROVED SIGNATURE HELPER ===
     def get_signature_image(user, signed, signature_date, width=80, height=25):
-        """Get signature image or placeholder"""
-        if user and signed and user.signature_filename:
-            sig_path = os.path.join(app.config.get(
-                'SIGNATURE_FOLDER', ''), user.signature_filename)
-            if os.path.exists(sig_path):
-                return Image(sig_path, width=width, height=height)
+        """Get signature image or placeholder with better error handling"""
+        try:
+            if user and signed and user.signature_filename:
+                sig_path = os.path.join(app.config.get('SIGNATURE_FOLDER', ''), user.signature_filename)
+                if os.path.exists(sig_path):
+                    return Image(sig_path, width=width, height=height)
+            
+            # Return appropriate placeholder based on status
+            if user and signed:
+                return Paragraph("✓ SIGNED", small)  # Signed but no image
+            elif user:
+                return Paragraph("PENDING", small)  # Not signed yet
+            else:
+                return Paragraph("__________________", small)  # No user assigned
+                
+        except Exception as e:
+            print(f"Signature error for user {user.id if user else 'None'}: {e}")
+            return Paragraph("ERROR", small)
 
-        # Return placeholder text if no signature
-        return Paragraph("__________________", small)
-
-    # === HEADER PART 2: Mission/Activity, Compiled by, Reviewed by, Date ===
-    # Get signatures for creator and reviewer with smaller dimensions
+    # === HEADER PART 2: Signatories with REAL-TIME DATA ===
+    # Adjust signature sizes for mobile
+    sig_width = 70 if is_mobile else 80
+    sig_height = 20 if is_mobile else 25
+    
     creator_sig = get_signature_image(
-        creator, form.creator_signed, form.creator_signature_date, width=80, height=25)
+        creator, form.creator_signed, form.creator_signature_date, 
+        width=sig_width, height=sig_height
+    )
     reviewer_sig = get_signature_image(
-        reviewer, form.evaluator_signed, form.evaluator_signature_date, width=80, height=25)
+        reviewer, form.evaluator_signed, form.evaluator_signature_date, 
+        width=sig_width, height=sig_height
+    )
 
-    # Adjusted column widths - larger Mission/Activity, smaller signature columns
+    # Dynamic column widths for header
+    if is_mobile:
+        header2_colWidths = [280, 85, 70, 85, 70, 85]  # Mobile-optimized
+    else:
+        header2_colWidths = [300, 90, 80, 90, 80, 85]  # Standard
+
     header2_data = [[
-        Paragraph(
-            f"<b>Mission/Activity:</b><br/><br/>{form.activity_mission or ''}", small),
-        Paragraph(
-            f"<b>Compiled by:</b><br/>{creator.get_full_name() if creator else 'N/A'}<br/>", small),
-        creator_sig,  # Creator signature with smaller size
-        Paragraph(
-            f"<b>Reviewed by:</b><br/>{reviewer.get_full_name() if reviewer else 'N/A'}<br/>", small),
-        reviewer_sig,  # Reviewer signature with smaller size
-        Paragraph(
-            f"<b>Date:</b><br/><br/>{form.date_created.strftime('%d %B %Y') if form.date_created else ''}", small)
+        Paragraph(f"<b>Mission/Activity:</b><br/>{form.activity_mission or ''}", small),
+        Paragraph(f"<b>Compiled by:</b><br/>{creator.get_full_name() if creator else 'N/A'}", small),
+        creator_sig,
+        Paragraph(f"<b>Reviewed by:</b><br/>{reviewer.get_full_name() if reviewer else 'N/A'}", small),
+        reviewer_sig,
+        Paragraph(f"<b>Date:</b><br/>{form.date_created.strftime('%d %b %Y') if form.date_created else ''}", small)
     ]]
-    # New column widths: Larger Mission/Activity, smaller signatures
-    header2_table = Table(header2_data, colWidths=[
-                          # total 725 (300 + 90 + 80 + 90 + 80 + 85)
-                          300, 90, 80, 90, 80, 85])
+    
+    header2_table = Table(header2_data, colWidths=header2_colWidths)
     header2_table.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.4, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -2311,20 +2376,16 @@ def mrm_pdf(form_id):
     ]))
     elements.append(header2_table)
 
-    # === HEADER PART 3: Objective ===
-    row_obj = [[Paragraph(
-        f"<b>Mission/Activity Objective:</b> {form.safety_objectives or ''}<br/><br/>",
-        small)]]
+    # === REST OF CONTENT (optimized for mobile) ===
+    # HEADER PART 3: Objective
+    row_obj = [[Paragraph(f"<b>Mission/Activity Objective:</b> {form.safety_objectives or ''}", small)]]
     row_obj_table = Table(row_obj, colWidths=[725])
-    row_obj_table.setStyle(TableStyle(
-        [('GRID', (0, 0), (-1, -1), 0.4, colors.black)]))
+    row_obj_table.setStyle(TableStyle([('GRID', (0, 0), (-1, -1), 0.4, colors.black)]))
     elements.append(row_obj_table)
 
-    # === HEADER PART 4: Assumptions ===
-    assump_style = ParagraphStyle(
-        "assump_center", parent=styles["Normal"], fontSize=10, alignment=1)
-    row_assump = [
-        [Paragraph("<b>Assumptions / Nominal Conditions</b>", assump_style)]]
+    # HEADER PART 4: Assumptions
+    assump_style = ParagraphStyle("assump_center", parent=styles["Normal"], fontSize=10, alignment=1)
+    row_assump = [[Paragraph("<b>Assumptions / Nominal Conditions</b>", assump_style)]]
     row_assump_table = Table(row_assump, colWidths=[725])
     row_assump_table.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.4, colors.black),
@@ -2332,12 +2393,12 @@ def mrm_pdf(form_id):
     ]))
     elements.append(row_assump_table)
 
-    # === HEADER PART 5: Crew + Environment ===
+    # HEADER PART 5: Crew + Environment
     row4_data = [[
         Paragraph(f"<b>Crew/Personnel:</b> I.M.S.A.F.E.", small),
         Paragraph(f"<b>Environment:</b> {form.environment or ''}", small)
     ]]
-    row4_table = Table(row4_data, colWidths=[362.5, 362.5])  # total 725
+    row4_table = Table(row4_data, colWidths=[362.5, 362.5])
     row4_table.setStyle(TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.4, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -2348,15 +2409,13 @@ def mrm_pdf(form_id):
     ]))
     elements.append(row4_table)
 
-    # === HEADER PART 6: Vehicle + Mission ===
+    # HEADER PART 6: Vehicle + Mission
     row5_data = [[
-        Paragraph(
-            f"<b>Aircraft/Vehicle:</b> {form.aircraft_vehicle or ''}", small),
+        Paragraph(f"<b>Aircraft/Vehicle:</b> {form.aircraft_vehicle or ''}", small),
         Paragraph(f"<b>Mission:</b> {form.mission_statement or ''}", small)
     ]]
     row5_table = Table(row5_data, colWidths=[362.5, 362.5])
-    row5_table.setStyle(TableStyle(
-        [('GRID', (0, 0), (-1, -1), 0.4, colors.black)]))
+    row5_table.setStyle(TableStyle([('GRID', (0, 0), (-1, -1), 0.4, colors.black)]))
     elements.append(row5_table)
 
     # === RISK COLOR FUNCTION ===
@@ -2380,15 +2439,13 @@ def mrm_pdf(form_id):
 
     # === HAZARD TABLE ===
     data = [
-        ["NR", "Risk Identified (RI)", "Assessed Risk (AR)", "", "",
-         "Mitigations / Treatments Needed", "Residual Risk (RR)", "", ""],
-        ["NR", "Hazard Description", "Likelihood", "Severity",
-         "Risk Level", "Mitigations", "Likelihood", "Severity", "Risk Level"]
+        ["NR", "Risk Identified (RI)", "Assessed Risk (AR)", "", "", "Mitigations / Treatments Needed", "Residual Risk (RR)", "", ""],
+        ["NR", "Hazard Description", "Likelihood", "Severity", "Risk Level", "Mitigations", "Likelihood", "Severity", "Risk Level"]
     ]
+    
     for idx, mh in enumerate(hazards, start=1):
         h = mh.hazard
-        mitigation_lines = [
-            "• " + ln.strip() for ln in str(h.mitigations or "").splitlines() if ln.strip()]
+        mitigation_lines = ["• " + ln.strip() for ln in str(h.mitigations or "").splitlines() if ln.strip()]
         data.append([
             str(idx),
             Paragraph(h.hazard_description or "", small),
@@ -2400,12 +2457,12 @@ def mrm_pdf(form_id):
             h.after_severity or "",
             h.after_risk_rating or ""
         ])
+    
     table = Table(data, colWidths=hazard_colWidths, repeatRows=2)
     ts = TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.4, colors.black),
         ('SPAN', (2, 0), (4, 0)), ('SPAN', (6, 0), (8, 0)),
-        ('SPAN', (1, 0), (1, 1)), ('SPAN', (5, 0),
-                                   (5, 1)), ('SPAN', (0, 0), (0, 1)),
+        ('SPAN', (1, 0), (1, 1)), ('SPAN', (5, 0), (5, 1)), ('SPAN', (0, 0), (0, 1)),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (5, 2), (5, -1), 'LEFT'),
@@ -2416,24 +2473,20 @@ def mrm_pdf(form_id):
         ('TOPPADDING', (0, 0), (-1, -1), 2),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ])
+    
     for row_idx, mh in enumerate(hazards, start=2):
         h = mh.hazard
-        ts.add('BACKGROUND', (4, row_idx), (4, row_idx), risk_color(
-            h.before_likelihood, h.before_severity, h.before_risk_rating))
-        ts.add('BACKGROUND', (8, row_idx), (8, row_idx), risk_color(
-            h.after_likelihood, h.after_severity, h.after_risk_rating))
+        ts.add('BACKGROUND', (4, row_idx), (4, row_idx), risk_color(h.before_likelihood, h.before_severity, h.before_risk_rating))
+        ts.add('BACKGROUND', (8, row_idx), (8, row_idx), risk_color(h.after_likelihood, h.after_severity, h.after_risk_rating))
+    
     table.setStyle(ts)
     elements.append(table)
 
     # === SUMMARY ROW ===
     pct = form.total_percent or 0
-    summary_style = ParagraphStyle(
-        "summary_bold", parent=styles["Normal"],
-        fontSize=10, leading=13, alignment=1
-    )
+    summary_style = ParagraphStyle("summary_bold", parent=styles["Normal"], fontSize=10, leading=13, alignment=1)
     summary_data = [[
-        Paragraph(
-            f"<b>Total RR/Max Risk x 100 = Risk% __{pct:.0f}%__</b>", summary_style),
+        Paragraph(f"<b>Total RR/Max Risk x 100 = Risk% __{pct:.0f}%__</b>", summary_style),
         Paragraph("<b>MANAGEMENT</b>", summary_style)
     ]]
     summary_table = Table(summary_data, colWidths=[350, 375])
@@ -2449,50 +2502,36 @@ def mrm_pdf(form_id):
     ]))
     elements.append(summary_table)
 
-    # === AUTHORITY TABLE WITH NAME AND SIGNATURE COLUMNS ===
-    # Get authority signature with smaller size
+    # === IMPROVED AUTHORITY TABLE WITH REAL-TIME DATA ===
     authority_sig = get_signature_image(
-        authority_user, form.authority_approved, form.authority_approval_date, width=80, height=25)
-
-    # Create centered style for name and date
-    centered_small = ParagraphStyle(
-        "centered_small", parent=styles["Normal"], fontSize=9, leading=11, alignment=1
+        authority_user, form.authority_approved, form.authority_approval_date, 
+        width=sig_width, height=sig_height
     )
 
-    # Format name and date/time for authority with centered alignment
-    authority_name_date = ""
+    centered_small = ParagraphStyle("centered_small", parent=styles["Normal"], fontSize=font_size, leading=font_size+2, alignment=1)
+
+    # Dynamic authority information based on REAL-TIME status
     if authority_user and form.authority_approved:
-        authority_name_date = f"{authority_user.get_full_name()}<br/>{form.authority_approval_date.strftime('%d %B %Y %H:%M') if form.authority_approval_date else 'Not Signed'}"
+        authority_name_date = f"{authority_user.get_full_name()}<br/>APPROVED<br/>{form.authority_approval_date.strftime('%d %b %Y %H:%M') if form.authority_approval_date else ''}"
     elif authority_user:
-        authority_name_date = f"{authority_user.get_full_name()}<br/>Pending Approval"
+        authority_name_date = f"{authority_user.get_full_name()}<br/>PENDING APPROVAL"
     else:
-        authority_name_date = "Not Assigned<br/>Pending Approval"
+        authority_name_date = "NOT ASSIGNED<br/>PENDING APPROVAL"
 
     authority_data = [
-        ["Residual Risk /Max Risk (%)", "Mission Decision Authority",
-         "Name with Date/Time", "Signature"],
-        ["≤50%", "Operator",
-         Paragraph(authority_name_date, centered_small) if pct <= 50 else "",
-         authority_sig if pct <= 50 else ""],
-        ["51–65%", "Supervisor",
-         Paragraph(authority_name_date,
-                   centered_small) if 51 <= pct <= 65 else "",
-         authority_sig if 51 <= pct <= 65 else ""],
-        ["66–75%", "Squadron Commander",
-         Paragraph(authority_name_date,
-                   centered_small) if 66 <= pct <= 75 else "",
-         authority_sig if 66 <= pct <= 75 else ""],
-        ["76–85%", "Director for Operations",
-         Paragraph(authority_name_date,
-                   centered_small) if 76 <= pct <= 85 else "",
-         authority_sig if 76 <= pct <= 85 else ""],
-        ["86–100%", "Commander",
-         Paragraph(authority_name_date, centered_small) if pct >= 86 else "",
-         authority_sig if pct >= 86 else ""]
+        ["Residual Risk /Max Risk (%)", "Mission Decision Authority", "Name with Date/Time", "Signature"],
+        ["≤50%", "Operator", Paragraph(authority_name_date, centered_small) if pct <= 50 else "", authority_sig if pct <= 50 else ""],
+        ["51–65%", "Supervisor", Paragraph(authority_name_date, centered_small) if 51 <= pct <= 65 else "", authority_sig if 51 <= pct <= 65 else ""],
+        ["66–75%", "Squadron Commander", Paragraph(authority_name_date, centered_small) if 66 <= pct <= 75 else "", authority_sig if 66 <= pct <= 75 else ""],
+        ["76–85%", "Director for Operations", Paragraph(authority_name_date, centered_small) if 76 <= pct <= 85 else "", authority_sig if 76 <= pct <= 85 else ""],
+        ["86–100%", "Commander", Paragraph(authority_name_date, centered_small) if pct >= 86 else "", authority_sig if pct >= 86 else ""]
     ]
 
-    # Calculate column widths to match total table width of 725
-    authority_colWidths = [150, 200, 200, 175]  # total = 725
+    # Dynamic authority column widths
+    if is_mobile:
+        authority_colWidths = [130, 180, 190, 165]  # Mobile-optimized
+    else:
+        authority_colWidths = [150, 200, 200, 175]  # Standard
 
     authority_table = Table(authority_data, colWidths=authority_colWidths)
     authority_style = TableStyle([
@@ -2503,7 +2542,7 @@ def mrm_pdf(form_id):
         ('FONTSIZE', (0, 0), (-1, -1), 8),
     ])
 
-    # Highlight the current risk level
+    # Highlight current risk level
     if pct <= 50:
         authority_style.add('BACKGROUND', (0, 1), (3, 1), colors.lightblue)
     elif 51 <= pct <= 65:
@@ -2518,23 +2557,32 @@ def mrm_pdf(form_id):
     authority_table.setStyle(authority_style)
     elements.append(authority_table)
 
-    # === RISK MATRIX LEGEND ===
+    # === RISK MATRIX LEGEND (mobile optimized) ===
     img_path = os.path.join(app.static_folder, "risk_matrix.png")
     if os.path.exists(img_path):
         elements.append(Spacer(1, 12))
         elements.append(Paragraph("<b>Risk Matrix Legend:</b>", small))
-        elements.append(Image(img_path, width=360, height=180))
+        if is_mobile:
+            elements.append(Image(img_path, width=300, height=150))  # Smaller for mobile
+        else:
+            elements.append(Image(img_path, width=360, height=180))
 
     # === BUILD PDF ===
     doc.build(elements)
     pdf = buffer.getvalue()
     buffer.close()
 
+    # === CACHE-CONTROLLED RESPONSE ===
     response = make_response(pdf)
     response.headers["Content-Type"] = "application/pdf"
-    response.headers["Content-Disposition"] = f"inline; filename=mrm_{form.mrm_number}.pdf"
+    response.headers["Content-Disposition"] = f"inline; filename=mrm_{form.mrm_number}_{cache_buster}.pdf"
+    
+    # Prevent caching - especially important for mobile
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
     return response
-
 
 @app.route('/filter_hazards')
 @login_required
